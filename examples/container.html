@@ -33,6 +33,7 @@
 
 
     <!-- First load pikaday.js and then the jQuery plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment-with-locales.min.js"></script>
     <script src="../pikaday.js"></script>
     <script>
 
@@ -40,6 +41,7 @@
     {
         field: document.getElementById('datepicker'),
         firstDay: 1,
+        disableWeekends: true,
         minDate: new Date(2000, 0, 1),
         maxDate: new Date(2020, 12, 31),
         yearRange: [2000, 2020],

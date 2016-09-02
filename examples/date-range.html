@@ -15,16 +15,20 @@
 
     <p><a href="https://github.com/dbushell/Pikaday"><strong>Pikaday source on GitHub</strong></a></p>
 
-    <div style="display: inline-block">
-        <label for="start">Start:</label>
-        <br>
-        <input type="text" id="start">
-    </div>
+    <div style="text-align: center">
+        <div style="display: inline-block">
+            <label for="start">Start</label>
+            <br>
+            <input type="text" id="start" aria-describedby="start_desc">
+            <p id="start_desc" role="status" aria-live="assertive" aria-atomic="true"></p>
+        </div>
 
-    <div style="display: inline-block">
-        <label for="end">End:</label>
-        <br>
-        <input type="text" id="end">
+        <div style="display: inline-block">
+            <label for="end">End</label>
+            <br>
+            <input type="text" id="end" aria-describedby="end_desc">
+            <p id="end_desc" role="status" aria-live="assertive" aria-atomic="true"></p>
+        </div>
     </div>
 
     <h2>What is this?</h2>
@@ -33,34 +37,64 @@
 
     <p class="small">Copyright &copy; 2014 <a href="http://dbushell.com/">David Bushell</a> | BSD &amp; MIT license</p>
 
-
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment-with-locales.min.js"></script>
     <script src="../pikaday.js"></script>
     <script>
     var startDate,
         endDate,
+        isSameDate = function(a, b) {
+            if (!a || !b) {
+                return false;
+            }
+            return a.getTime() == b.getTime();
+        },
         updateStartDate = function() {
-            startPicker.setStartRange(startDate);
-            endPicker.setStartRange(startDate);
+            updateRange(startPicker, startDate);
+            updateRange(endPicker, startDate);
             endPicker.setMinDate(startDate);
         },
         updateEndDate = function() {
-            startPicker.setEndRange(endDate);
-            startPicker.setMaxDate(endDate);
-            endPicker.setEndRange(endDate);
+            updateRange(startPicker, false, endDate);
+            updateRange(endPicker, false, endDate);
+        },
+        updateRange = function(picker, start, end) {
+            var dirty = false;
+            if (start) {
+                if (picker.getEndRange() && !isSameDate(picker.getStartRange(), start)) {
+                    dirty = true;
+                }
+                picker.setStartRange(start);
+            }
+            if (end) {
+                if (picker.getStartRange() && !isSameDate(picker.getEndRange(), end)) {
+                    dirty = true;
+                }
+                picker.setEndRange(end);
+            }
+            if (dirty) {
+                picker.draw();
+            }
         },
         startPicker = new Pikaday({
+            numberOfMonths: 2,
             field: document.getElementById('start'),
             minDate: new Date(),
             maxDate: new Date(2020, 12, 31),
+            position: 'bottom center',
+            disableWeekends: true,
             onSelect: function() {
                 startDate = this.getDate();
                 updateStartDate();
             }
         }),
         endPicker = new Pikaday({
+            numberOfMonths: 2,
             field: document.getElementById('end'),
             minDate: new Date(),
             maxDate: new Date(2020, 12, 31),
+            position: 'bottom center',
+            disableWeekends: true,
             onSelect: function() {
                 endDate = this.getDate();
                 updateEndDate();
@@ -68,6 +102,22 @@
         }),
         _startDate = startPicker.getDate(),
         _endDate = endPicker.getDate();
+
+        function handleOver(start) {
+            return function(event) {
+                console.log('Handle over', event.currentTarget);
+                var $target = $(event.currentTarget);
+                var date = new Date($target.data('pika-year'), $target.data('pika-month'), $target.data('pika-day'));
+                if (start) {
+                    updateRange(startPicker, date);
+                } else {
+                    updateRange(endPicker, null, date);
+                }
+            }
+        }
+
+        $(startPicker.el).on('mouseenter', '.pika-button', handleOver(true));
+        $(endPicker.el).on('mouseenter', '.pika-button', handleOver(false));
 
         if (_startDate) {
             startDate = _startDate;

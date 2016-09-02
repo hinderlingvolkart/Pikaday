@@ -22,14 +22,15 @@
   "main": "pikaday.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dbushell/Pikaday.git"
+    "url": "https://github.com/hinderlingvolkart/PikadayPlus.git"
   },
   "optionalDependencies": {
     "moment": "2.x"
   },
   "devDependencies": {
+    "expect.js": "^0.3.1",
     "mocha": "~1.18.2",
-    "expect.js": "^0.3.1"
+    "node-sass": "^3.8.0"
   },
   "testling": {
     "harness": "mocha",
@@ -37,9 +38,14 @@
     "browsers": [
       "ie/7..latest",
       "chrome/latest",
-      "firefox/3.6", "firefox/latest",
+      "firefox/3.6",
+      "firefox/latest",
       "safari/latest",
       "opera/latest"
     ]
+  },
+  "scripts": {
+    "sass": "node-sass scss --output css",
+    "watch": "node-sass --watch scss --output css"
   }
 }
