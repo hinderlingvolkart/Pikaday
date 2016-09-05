@@ -199,6 +199,25 @@ $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
         font-weight: bold;
     }
 
+    .is-inrange & {
+        background: #D5E9F7;
+    }
+
+    .is-startrange & {
+        color: #fff;
+        background: #6CB31D;
+        box-shadow: none;
+        border-radius: 3px;
+    }
+
+    .is-endrange & {
+        color: #fff;
+        background: #33aaff;
+        box-shadow: none;
+        border-radius: 3px;
+    }
+
+
     .is-selected & {
         color: $pd-day-selected-color;
         font-weight: bold;
@@ -228,20 +247,4 @@ $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
     color: $pd-week-color;
 }
 
-.is-inrange .pika-button {
-    background: #D5E9F7;
-}
 
-.is-startrange .pika-button {
-    color: #fff;
-    background: #6CB31D;
-    box-shadow: none;
-    border-radius: 3px;
-}
-
-.is-endrange .pika-button {
-    color: #fff;
-    background: #33aaff;
-    box-shadow: none;
-    border-radius: 3px;
-}

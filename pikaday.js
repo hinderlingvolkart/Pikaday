@@ -191,6 +191,9 @@
         // bind the picker to a form field
         field: null,
 
+         // default `field` if `field` is set
+       trigger: null,
+
         locale: {
             today: 'Today',
             disabled: 'Disabled',
@@ -200,8 +203,11 @@
         // automatically show/hide the picker on `field` focus (default `true` if `field` is set)
         bound: undefined,
 
+
+
         // position of the datepicker, relative to the field (default to bottom & left)
         // ('bottom' & 'left' keywords are not used, 'top' & 'right' are modifier on the bottom/left position)
+        positionTarget: null,
         position: 'bottom left',
 
         // automatically fit in the viewport even if it means repositioning from the position option
@@ -520,12 +526,13 @@
 
                 switch(e.keyCode){
                     case 13: /* ENTER */
-                    case 27: /* ESCAPE */
                         if (!opts.container) {
                             self.hide();
-                            if (self._o.field) {
-                                self._o.field.select();
-                            }
+                        }
+                        break;
+                    case 27: /* ESCAPE */
+                        if (!opts.container) {
+                            self.cancel();
                         }
                         break;
                     case 37: /* LEFT */
@@ -617,7 +624,7 @@
 
             if (!self._c) {
                 self._b = sto(function() {
-                    self.hide();
+                    self.hide(true);
                 }, 50);
             }
             self._c = false;
@@ -647,7 +654,7 @@
             }
             while ((pEl = pEl.parentNode));
             if (self._v && target !== opts.trigger && pEl !== opts.trigger) {
-                self.hide();
+                self.hide(true);
             }
         };
 
@@ -1028,10 +1035,48 @@
             return this._o.endRange;
         },
 
+
+        _request: function(action) {
+            var self = this;
+            if (window.requestAnimationFrame) {
+                if (!this.requested) {
+                    this.requested = {
+                        request: window.requestAnimationFrame(function() {
+                            if (self.requested.draw) {
+                                self._draw();
+                            }
+                            if (self.requested.adjustPosition) {
+                                self._adjustPosition();
+                            }
+                            self.requested = null;
+                        })
+                    };
+                }
+                this.requested[action] = true;
+            } else {
+                // execute immediately without animation frame support
+                this['_' + action]();
+            }
+        },
+
+        /**
+         * request refreshing HTML
+         * (uses requestAnimationFrame if available to improve performance)
+         */
+        draw: function(force) {
+            if (force) {
+                this._draw(force);
+            } else {
+                this._request('draw');
+            }
+        },
+
+
+
         /**
          * refresh the HTML
          */
-        draw: function(force)
+        _draw: function(force)
         {
             if (!this._v && !force) {
                 return;
@@ -1111,13 +1156,19 @@
 
         adjustPosition: function()
         {
+            this._request('adjustPosition');
+        },
+
+
+        _adjustPosition: function()
+        {
             var field, pEl, width, height, viewportWidth, viewportHeight, scrollTop, left, top, clientRect;
 
             if (this._o.container) return;
 
             this.el.style.position = 'absolute';
 
-            field = this._o.trigger;
+            field = this._o.positionTarget || this._o.trigger;
             pEl = field;
             width = this.el.offsetWidth;
             height = this.el.offsetHeight;
@@ -1284,13 +1335,27 @@
                     addEvent(document, 'click', this._onDocumentClick);
                     this.adjustPosition();
                 }
+                if (this._o.field) {
+                    this.recentValue = this._o.field.value;
+                }
                 if (typeof this._o.onOpen === 'function') {
                     this._o.onOpen.call(this);
                 }
             }
         },
 
-        hide: function()
+        cancel: function() {
+            var field = this._o.field;
+            if (field) {
+                field.value = this.recentValue;
+            }
+            this.hide(true);
+            if (field) {
+                field.select();
+            }
+        },
+
+        hide: function(cancelled)
         {
             var v = this._v;
             if (v !== false) {
@@ -1303,7 +1368,7 @@
                 addClass(this.el, 'is-hidden');
                 this._v = false;
                 if (v !== undefined && typeof this._o.onClose === 'function') {
-                    this._o.onClose.call(this);
+                    this._o.onClose.call(this, cancelled);
                 }
             }
         },
