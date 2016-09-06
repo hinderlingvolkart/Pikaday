@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
-    <title>Pikaday - Date Range example</title>
+    <title>Pikarange - Date Range example</title>
     <meta name="author" content="David Bushell">
     <link rel="stylesheet" href="../css/pikaday.css">
     <link rel="stylesheet" href="../css/site.css">
 </head>
 <body>
-    <h1>Pikaday - Date Range example</h1>
+    <h1>Pikarange - Date Range example</h1>
 
     <p class="large">A refreshing JavaScript Datepicker — lightweight, no dependencies, modular CSS.</p>
 
@@ -38,129 +38,18 @@
     <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment-with-locales.min.js"></script>
     <script src="../pikaday.js"></script>
+    <script src="../pikarange.js"></script>
     <script>
-    var startDate,
-        endDate,
-        isSameDate = function(a, b) {
-            if (!a || !b) {
-                return false;
-            }
-            return a.getTime() == b.getTime();
-        },
-        updateStartDate = function() {
-            updateRange(startPicker, startDate);
-            updateRange(endPicker, startDate);
-            endPicker.setMinDate(startDate);
-        },
-        updateEndDate = function() {
-            updateRange(startPicker, false, endDate);
-            updateRange(endPicker, false, endDate);
-        },
-        updateRange = function(picker, start, end) {
-            var dirty = false;
-            if (start) {
-                if (picker.getEndRange() && !isSameDate(picker.getStartRange(), start)) {
-                    dirty = true;
-                }
-                picker.setStartRange(start);
-            }
-            if (end) {
-                if (picker.getStartRange() && !isSameDate(picker.getEndRange(), end)) {
-                    dirty = true;
-                }
-                picker.setEndRange(end);
-            }
-            if (dirty) {
-                picker.draw();
-            }
-        },
-        startPicker = new Pikaday({
+        var range = new Pikarange({
             numberOfMonths: 2,
-            field: document.getElementById('start'),
+            start: {field: document.getElementById('start')},
+            end: {field: document.getElementById('end')},
             minDate: new Date(),
             maxDate: new Date(2020, 12, 31),
             positionTarget: document.getElementById('group'),
             position: 'bottom center',
-            disableWeekends: true,
-            onSelect: function() {
-                startDate = this.getDate();
-                updateStartDate();
-            },
-            onOpen: function(cancelled) {
-                updateRange(startPicker, startPicker.getDate());
-            },
-            onClose: function(cancelled) {
-                if (!cancelled) {
-                    endPicker._o.field.focus();
-                }
-            }
-        }),
-        endPicker = new Pikaday({
-            numberOfMonths: 2,
-            field: document.getElementById('end'),
-            minDate: new Date(),
-            maxDate: new Date(2020, 12, 31),
-            positionTarget: document.getElementById('group'),
-            position: 'bottom center',
-            disableWeekends: true,
-            onOpen: function(cancelled) {
-                updateRange(endPicker, null, endPicker.getDate());
-            },
-            onSelect: function() {
-                endDate = this.getDate();
-                updateEndDate();
-            }
-        }),
-        _startDate = startPicker.getDate(),
-        _endDate = endPicker.getDate();
-
-        function handleOver(start) {
-            return function(event) {
-                console.log('Handle over');
-                var $target = $(event.currentTarget);
-                var date = new Date($target.data('pika-year'), $target.data('pika-month'), $target.data('pika-day'));
-
-                var picker = start ? startPicker : endPicker;
-                clearTimeout(picker.delay);
-                if (start) {
-                    updateRange(picker, date);
-                } else {
-                    updateRange(picker, null, date);
-                }
-            }
-        }
-
-        function handleOut(start) {
-            return function(event) {
-                console.log('Handle out');
-                var $target = $(event.currentTarget);
-
-                var picker = start ? startPicker : endPicker;
-                clearTimeout(picker.delay);
-                picker.delay = setTimeout(function() {
-                    if (start) {
-                        updateRange(picker, startPicker.getDate());
-                    } else {
-                        updateRange(picker, null, endPicker.getDate());
-                    }
-                }, 200);
-            }
-        }
-
-        $(startPicker.el).on('mouseenter', '.pika-button', handleOver(true));
-        $(endPicker.el).on('mouseenter', '.pika-button', handleOver(false));
-        $(startPicker.el).on('mouseleave', '.pika-button', handleOut(true));
-        $(endPicker.el).on('mouseleave', '.pika-button', handleOut(false));
-
-        if (_startDate) {
-            startDate = _startDate;
-            updateStartDate();
-        }
-
-        if (_endDate) {
-            endDate = _endDate;
-            updateEndDate();
-        }
+            disableWeekends: true
+        });
     </script>
 </body>
 </html>

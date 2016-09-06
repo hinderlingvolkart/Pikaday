@@ -2,6 +2,7 @@
  * Pikaday
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
+ * Copyright © 2016 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
 
 (function (root, factory)
@@ -192,13 +193,7 @@
         field: null,
 
          // default `field` if `field` is set
-       trigger: null,
-
-        locale: {
-            today: 'Today',
-            disabled: 'Disabled',
-            help: 'Use arrow keys to choose a date.'
-        },
+        trigger: null,
 
         // automatically show/hide the picker on `field` focus (default `true` if `field` is set)
         bound: undefined,
@@ -231,10 +226,10 @@
         labelFn: function(day) {
             var text = hasMoment ? moment(day.date).format('dddd – LL') : day.date.toDateString();
             if (day.isToday) {
-                text += ' (' + this._o.locale.today + ')';
+                text += ' (' + this._o.i18n.today + ')';
             }
             if (day.isDisabled) {
-                text = '(' + this._o.locale.disabled + ') ' + text;
+                text = '(' + this._o.i18n.disabled + ') ' + text;
             }
             return text;
         },
@@ -287,6 +282,10 @@
 
         // internationalization
         i18n: {
+            today: 'Today',
+            disabled: 'Disabled',
+            help: 'Use arrow keys to choose a date.',
+
             previousMonth : 'Previous Month',
             nextMonth     : 'Next Month',
             months        : ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -856,7 +855,7 @@
             setToStartOfDay(this._d);
             this.gotoDate(this._d);
 
-            this.speakEl.innerHTML = this.getDayConfig(this._d).label;
+            this.speak(this.getDayConfig(this._d).label);
 
             if (this._o.field) {
                 this._o.field.value = this.toString();
@@ -865,6 +864,24 @@
             if (!preventOnSelect && typeof this._o.onSelect === 'function') {
                 this._o.onSelect.call(this, this.getDate());
             }
+        },
+
+        getLabel: function() {
+            var label = '';
+            if (this._o.field && this._o.field.id) {
+                label = document.querySelector('label[for="' + this._o.field.id + '"]');
+                label = label ? label.innerText : '';
+            }
+            if (!label && this._o.trigger) {
+                label = this._o.trigger.innerText;
+            }
+            label += ' (' + this._o.i18n.help + ')';
+            return label;
+        },
+
+        speak: function(html) {
+            this.speak.innerHTML = '';
+            this.speakEl.innerHTML = html;
         },
 
         /**
@@ -1104,15 +1121,7 @@
 
             randId = 'pika-title-' + Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 2);
 
-            var label = '';
-            if (this._o.field && this._o.field.id) {
-                label = document.querySelector('label[for="' + this._o.field.id + '"]');
-                label = label ? label.innerText : '';
-            }
-            if (!label && this._o.trigger) {
-                label = this._o.trigger.innerText;
-            }
-            label += ' (' + this._o.locale.help + ')';
+            var label = this.getLabel();
 
             if (this._o.field && this._o.trigger == this._o.field) {
                 this._o.field.setAttribute('aria-label', label);
@@ -1341,6 +1350,8 @@
                 if (typeof this._o.onOpen === 'function') {
                     this._o.onOpen.call(this);
                 }
+
+                this.speak(this.getLabel());
             }
         },
 

@@ -199,23 +199,6 @@ $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
         font-weight: bold;
     }
 
-    .is-inrange & {
-        background: #D5E9F7;
-    }
-
-    .is-startrange & {
-        color: #fff;
-        background: #6CB31D;
-        box-shadow: none;
-        border-radius: 3px;
-    }
-
-    .is-endrange & {
-        color: #fff;
-        background: #33aaff;
-        box-shadow: none;
-        border-radius: 3px;
-    }
 
 
     .is-selected & {
@@ -233,6 +216,28 @@ $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
         color: $pd-day-disabled-color;
         opacity: .3;
     }
+
+    .is-inrange & {
+        background: #D5E9F7;
+        box-shadow: none;
+        color: inherit;
+        border-radius: 0;
+    }
+
+    .is-startrange & {
+        color: #fff;
+        background: #6CB31D;
+        box-shadow: none;
+        border-radius: 3px;
+    }
+
+    .is-endrange & {
+        color: #fff;
+        background: #33aaff;
+        box-shadow: none;
+        border-radius: 3px;
+    }
+
 
     &:hover {
         color: $pd-day-hover-color;
