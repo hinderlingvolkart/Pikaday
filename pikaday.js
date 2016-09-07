@@ -521,11 +521,27 @@
         {
             e = e || window.event;
 
+            function captureKey() {
+                self.hasKey = true;
+                e.preventDefault();
+            }
+
             if (self.isVisible()) {
 
                 switch(e.keyCode){
+                    case 9: /* TAB */
+                        if (self.hasKey && self._o.trigger) {
+                            self._o.trigger.focus();
+                            self.hasKey = false;
+                        }
+                        break;
+                    case 32: /* SPACE */
                     case 13: /* ENTER */
-                        if (!opts.container) {
+                        if (self.hasKey && !opts.container) {
+                            if (self._o.trigger) {
+                                self._o.trigger.focus();
+                                self._o.trigger.select();
+                            }
                             self.hide();
                         }
                         break;
@@ -535,42 +551,42 @@
                         }
                         break;
                     case 37: /* LEFT */
-                        e.preventDefault();
+                        captureKey();
                         self.adjustDate('subtract', 1);
                         break;
                     case 38: /* UP */
-                        e.preventDefault();
+                        captureKey();
                         self.adjustDate('subtract', 7);
                         break;
                     case 39: /* RIGHT */
-                        e.preventDefault();
+                        captureKey();
                        self.adjustDate('add', 1);
                         break;
                     case 40: /* DOWN */
-                        e.preventDefault();
+                        captureKey();
                         self.adjustDate('add', 7);
                         break;
                     case 33: /* PAGE_UP */
                         if (hasMoment) {
-                            e.preventDefault();
+                            captureKey();
                             self.setDate(moment(self.getDate()).subtract(1, 'months').toDate());
                         }
                         break;
                     case 34: /* PAGE_DOWN */
                         if (hasMoment) {
-                            e.preventDefault();
+                            captureKey();
                             self.setDate(moment(self.getDate()).add(1, 'months').toDate());
                         }
                         break;
                     case 35: /* END */
                         if (hasMoment) {
-                            e.preventDefault();
+                            captureKey();
                             self.setDate(moment(self.getDate()).add(1, 'years').toDate());
                         }
                         break;
                     case 36: /* HOME */
                         if (hasMoment) {
-                            e.preventDefault();
+                            captureKey();
                             self.setDate(moment(self.getDate()).subtract(1, 'years').toDate());
                         }
                         break;
@@ -612,10 +628,13 @@
 
         self._onInputBlur = function()
         {
+            if (self.hasKey) {
+                return;
+            }
             // IE allows pika div to gain focus; catch blur the input field
             var pEl = document.activeElement;
             do {
-                if (hasClass(pEl, 'pika-single')) {
+                if (hasClass(pEl, 'pika-single') || pEl == self.el) {
                     return;
                 }
             }
@@ -659,6 +678,8 @@
 
         self.el = document.createElement('div');
         self.el.className = 'pika-single' + (opts.isRTL ? ' is-rtl' : '') + (opts.theme ? ' ' + opts.theme : '');
+        self.el.setAttribute('role', 'application');
+        self.el.setAttribute('aria-label', self.getLabel());
 
         self.speakEl = document.createElement('div');
         self.speakEl.setAttribute('role', 'status');
@@ -867,15 +888,15 @@
         },
 
         getLabel: function() {
-            var label = '';
-            if (this._o.field && this._o.field.id) {
-                label = document.querySelector('label[for="' + this._o.field.id + '"]');
-                label = label ? label.innerText : '';
+            var label = '', opts = this._o;
+            if (opts.field && opts.field.id) {
+                label = document.querySelector('label[for="' + opts.field.id + '"]');
+                label = label ? label.textContent || label.innerText : '';
             }
-            if (!label && this._o.trigger) {
-                label = this._o.trigger.innerText;
+            if (!label && opts.trigger) {
+                label = opts.trigger.textContent || opts.trigger.innerText;
             }
-            label += ' (' + this._o.i18n.help + ')';
+            label += ' (' + opts.i18n.help + ')';
             return label;
         },
 
@@ -1099,6 +1120,7 @@
                 return;
             }
             var opts = this._o,
+                self = this,
                 minYear = opts.minYear,
                 maxYear = opts.maxYear,
                 minMonth = opts.minMonth,
@@ -1128,32 +1150,34 @@
             }
 
             for (var c = 0; c < opts.numberOfMonths; c++) {
-                html += '<div class="pika-lendar" role="application" aria-label="' + label + '">' + renderTitle(this, c, this.calendars[c].year, this.calendars[c].month, this.calendars[0].year, randId) + this.render(this.calendars[c].year, this.calendars[c].month, randId) + '</div>';
+                html += '<div class="pika-lendar">' + renderTitle(this, c, this.calendars[c].year, this.calendars[c].month, this.calendars[0].year, randId) + this.render(this.calendars[c].year, this.calendars[c].month, randId) + '</div>';
             }
 
-            var refocus = containsElement(this.el, document.activeElement) && document.activeElement;
             this.el.innerHTML = html;
-            if (refocus) {
-                if (hasClass(refocus, 'pika-next')) {
-                    refocus = '.pika-next';
-                } else
-                if (hasClass(refocus, 'pika-prev')) {
-                    refocus = '.pika-prev';
-                } else {
-                    refocus = '.pika-button[tabindex="0"]';
-                }
-                refocus = this.el.querySelector(refocus);
-                if (refocus) {
-                    refocus.focus();
-                } else {
-                    this.el.focus();
-                }
+
+            var autofocus = this.el.querySelector('td.is-selected > .pika-button');
+            if (!autofocus) {
+                autofocus = this.el.querySelector('td.is-today > .pika-button');
+            }
+            if (!autofocus) {
+                autofocus = this.el.querySelector('td:not(.is-disabled) > .pika-button');
+            }
+            if (!autofocus) {
+                autofocus = this.el.querySelector('.pika-button');
+            }
+            autofocus.setAttribute('tabindex', '0');
+            if (this.hasKey) {
+                autofocus.focus();
             }
 
             if (opts.bound) {
                 if(opts.field.type !== 'hidden') {
                     sto(function() {
-                        opts.trigger.focus();
+                        if (self.hasKey) {
+                            self.el.querySelector('.pika-button[tabindex="0"]').focus();
+                        } else {
+                            opts.trigger.focus();
+                        }
                     }, 1);
                 }
             }
@@ -1313,7 +1337,7 @@
                     dayConfig = this.getDayConfig(day);
 
                 dayConfig.isEmpty = i < before || i >= (days + before);
-                dayConfig.tabindex = compareDates(day, selectedInMonth) ? '0' : '-1';
+                dayConfig.tabindex = '-1';
 
                 row.push(renderDay(dayConfig));
 
@@ -1350,8 +1374,9 @@
                 if (typeof this._o.onOpen === 'function') {
                     this._o.onOpen.call(this);
                 }
-
-                this.speak(this.getLabel());
+                if (this._o.field && this._o.field != this._o.trigger) {
+                    this.speak(this.getLabel());
+                }
             }
         },
 
@@ -1360,16 +1385,17 @@
             if (field) {
                 field.value = this.recentValue;
             }
-            this.hide(true);
             if (field) {
                 field.select();
             }
+            this.hide(true);
         },
 
         hide: function(cancelled)
         {
             var v = this._v;
             if (v !== false) {
+                this.hasKey = false;
                 if (this._o.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
                 }
