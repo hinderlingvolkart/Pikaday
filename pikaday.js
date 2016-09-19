@@ -133,6 +133,12 @@
 
     compareDates = function(a,b)
     {
+        if (a == b) {
+            return true;
+        }
+        if (!a || !b) {
+            return false;
+        }
         // weak date comparison (use setToStartOfDay(date) to ensure correct result)
         return a.getTime() === b.getTime();
     },
@@ -476,9 +482,6 @@
                     if (opts.bound) {
                         sto(function() {
                             self.hide();
-                            if (opts.field) {
-                                opts.field.blur();
-                            }
                         }, 100);
                     }
                 } else
@@ -569,25 +572,25 @@
                     case 33: /* PAGE_UP */
                         if (hasMoment) {
                             captureKey();
-                            self.setDate(moment(self.getDate()).subtract(1, 'months').toDate());
+                            self.selectDate(moment(self.getDate()).subtract(1, 'months').toDate());
                         }
                         break;
                     case 34: /* PAGE_DOWN */
                         if (hasMoment) {
                             captureKey();
-                            self.setDate(moment(self.getDate()).add(1, 'months').toDate());
+                            self.selectDate(moment(self.getDate()).add(1, 'months').toDate());
                         }
                         break;
                     case 35: /* END */
                         if (hasMoment) {
                             captureKey();
-                            self.setDate(moment(self.getDate()).add(1, 'years').toDate());
+                            self.selectDate(moment(self.getDate()).add(1, 'years').toDate());
                         }
                         break;
                     case 36: /* HOME */
                         if (hasMoment) {
                             captureKey();
-                            self.setDate(moment(self.getDate()).subtract(1, 'years').toDate());
+                            self.selectDate(moment(self.getDate()).subtract(1, 'years').toDate());
                         }
                         break;
                 }
@@ -611,12 +614,12 @@
             if (isDate(date)) {
               self.setDate(date);
             }
-            if (!self._v) {
-                self.show();
-            }
+            // if (!self._v) {
+            //     self.show();
+            // }
         };
 
-        self._onInputFocus = function()
+        self._onInputFocus = function(event)
         {
             self.show();
         };
@@ -626,7 +629,7 @@
             self.show();
         };
 
-        self._onInputBlur = function()
+        self._onInputBlur = function(event)
         {
             if (self.hasKey) {
                 return;
@@ -675,6 +678,11 @@
                 self.hide(true);
             }
         };
+
+        if (typeof this._o.onInit === 'function') {
+            this._o.onInit.call(this);
+        }
+
 
         self.el = document.createElement('div');
         self.el.className = 'pika-single' + (opts.isRTL ? ' is-rtl' : '') + (opts.theme ? ' ' + opts.theme : '');
@@ -876,14 +884,19 @@
             setToStartOfDay(this._d);
             this.gotoDate(this._d);
 
-            this.speak(this.getDayConfig(this._d).label);
-
             if (this._o.field) {
                 this._o.field.value = this.toString();
                 fireEvent(this._o.field, 'change', { firedBy: this });
             }
             if (!preventOnSelect && typeof this._o.onSelect === 'function') {
                 this._o.onSelect.call(this, this.getDate());
+            }
+        },
+
+        selectDate: function(date) {
+            this.setDate(date);
+            if (this._d) {
+                this.speak(this.getDayConfig(this._d).label);
             }
         },
 
@@ -960,7 +973,7 @@
                 }
             }
 
-            this.setDate(newDay);
+            this.selectDate(newDay);
         },
 
         adjustCalendars: function() {
@@ -1055,12 +1068,18 @@
 
         setStartRange: function(value)
         {
-            this._o.startRange = value;
+            if (!compareDates(this._o.startRange, value)) {
+                this._o.startRange = value;
+                this.draw();
+            }
         },
 
         setEndRange: function(value)
         {
-            this._o.endRange = value;
+            if (!compareDates(this._o.endRange, value)) {
+                this._o.endRange = value;
+                this.draw();
+            }
         },
 
         getStartRange: function(value)
@@ -1102,6 +1121,9 @@
          * (uses requestAnimationFrame if available to improve performance)
          */
         draw: function(force) {
+            if (!this._v) {
+                return; // no need to draw when not visible
+            }
             if (force) {
                 this._draw(force);
             } else {
@@ -1175,8 +1197,6 @@
                     sto(function() {
                         if (self.hasKey) {
                             self.el.querySelector('.pika-button[tabindex="0"]').focus();
-                        } else {
-                            opts.trigger.focus();
                         }
                     }, 1);
                 }
@@ -1360,6 +1380,7 @@
 
         show: function()
         {
+            clearTimeout(this._b);
             if (!this.isVisible()) {
                 removeClass(this.el, 'is-hidden');
                 this._v = true;

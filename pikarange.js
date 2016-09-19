@@ -43,48 +43,27 @@
 
     sto = window.setTimeout,
 
-    isArray = function(obj)
+    addEvent = function(el, e, callback, capture)
     {
-        return (/Array/).test(Object.prototype.toString.call(obj));
-    },
-
-    isDate = function(obj)
-    {
-        return (/Date/).test(Object.prototype.toString.call(obj)) && !isNaN(obj.getTime());
-    },
-
-    extend = function(to, from, overwrite)
-    {
-        var prop, hasProp;
-        for (prop in from) {
-            hasProp = to[prop] !== undefined;
-            if (hasProp && typeof from[prop] === 'object' && from[prop] !== null && from[prop].nodeName === undefined) {
-                if (isDate(from[prop])) {
-                    if (overwrite) {
-                        to[prop] = new Date(from[prop].getTime());
-                    }
-                }
-                else if (isArray(from[prop])) {
-                    if (overwrite) {
-                        to[prop] = from[prop].slice(0);
-                    }
-                } else {
-                    to[prop] = extend({}, from[prop], overwrite);
-                }
-            } else if (overwrite || !hasProp) {
-                to[prop] = from[prop];
-            }
+        if (hasEventListeners) {
+            el.addEventListener(e, callback, !!capture);
+        } else {
+            el.attachEvent('on' + e, callback);
         }
-        return to;
     },
 
-    del = function(hash, key) {
-        var val = hash[key];
-        delete hash[key];
-        return val;
+    removeEvent = function(el, e, callback, capture)
+    {
+        if (hasEventListeners) {
+            el.removeEventListener(e, callback, !!capture);
+        } else {
+            el.detachEvent('on' + e, callback);
+        }
     },
 
-    extendMethod = function(src, dst, name) {
+
+
+    extendCallback = function(src, dst, name) {
         var origMethod = src[name];
         if (origMethod) {
             src[name] = function() {
@@ -95,70 +74,11 @@
             src[name] = dst[name];
         }
     },
-    extendPlus = function(orig, overwrite) {
+    extendCallbacks = function(orig, overwrite) {
         for (var method in overwrite) {
-            extendMethod(orig, overwrite, method);
+            extendCallback(orig, overwrite, method);
         }
         return orig;
-    },
-
-    compareDates = function(a,b)
-    {
-        if (!a || !b) {
-            return false;
-        }
-        // weak date comparison (use setToStartOfDay(date) to ensure correct result)
-        return a.getTime() === b.getTime();
-    },
-
-    adjustDate = function(day, days) {
-        var newDay;
-
-        if (!hasMoment) {
-            var difference = parseInt(days)*24*60*60*1000;
-            newDay = new Date(day.valueOf() + difference);
-        } else {
-            newDay = moment(day).add(days, "days").toDate();
-        }
-
-        return newDay;
-    },
-
-
-    updateRange = function(picker, start, end) {
-        var dirty = false;
-        if (start) {
-            if (picker.getEndRange() && !compareDates(picker.getStartRange(), start)) {
-                dirty = true;
-            }
-            picker.setStartRange(start);
-        }
-        if (end) {
-            if (picker.getStartRange() && !compareDates(picker.getEndRange(), end)) {
-                dirty = true;
-            }
-            picker.setEndRange(end);
-        }
-        if (dirty) {
-            picker.draw();
-        }
-    },
-
-
-    /**
-     * defaults and localisation
-     */
-    defaults = {
-
-        // bind the picker to a form field
-        start: {},
-        end: {},
-
-        minRange: 0,
-        defaultRange: 1,
-        maxRange: -1
-
-
     },
 
 
@@ -169,189 +89,127 @@
      */
     Pikarange = function(options)
     {
-        var self = this,
-            opts = this.config(options),
-            updateStartDate = function() {
-                var minDate = opts.minRange >= 0 ? adjustDate(self.startDate, opts.minRange) : null;
-                var maxDate = opts.maxRange >= 0 ? adjustDate(self.startDate, opts.maxRange) : null;
+        var self = this;
+        var startField = options.start;
+        var endField = options.end;
 
-                updateRange(self.startPicker, self.startDate);
-                updateRange(self.endPicker, self.startDate);
-                if (minDate) {
-                    self.endPicker.setMinDate(minDate);
-                    if (self.endPicker._d && minDate > self.endPicker._d) {
-                        self.endPicker.setDate(minDate);
-                    }
-                }
-                if (maxDate) {
-                    // we could consider the max date set explicitely on the end picker
-                    self.endPicker.setMaxDate(maxDate);
-                    if (self.endPicker._d && maxDate < self.endPicker._d) {
-                        self.endPicker.setDate(maxDate);
-                    }
-                }
-                if (!self.endPicker._d && opts.defaultRange >= 0 && opts.defaultRange >= opts.minRange) {
-                    self.endPicker.setDate(adjustDate(self.startDate, opts.defaultRange));
-                }
-            },
-            updateEndDate = function() {
-                updateRange(self.startPicker, false, self.endDate);
-                updateRange(self.endPicker, false, self.endDate);
-            };
+        var pickerOptions = {};
+        for (var i in options) {
+            pickerOptions[i] = options[i];
+        }
+        delete pickerOptions.start;
+        delete pickerOptions.end;
+        pickerOptions.field = startField;
 
-        this.startPicker = new Pikaday(extendPlus(opts.start, {
+        var isEditingStart = true;
+
+        function isStart() {
+            return isEditingStart;
+        }
+
+        extendCallbacks(pickerOptions, {
             onSelect: function() {
-                self.startDate = self.startPicker.getDate();
-                updateStartDate();
-            },
-            onOpen: function(cancelled) {
-                updateRange(self.startPicker, self.startPicker.getDate());
+                if (isStart()) {
+                    picker.setStartRange(picker._d);
+                } else {
+                    picker.setEndRange(picker._d);
+                }
             },
             onClose: function(cancelled) {
+                console.log('Closed picker');
                 if (!cancelled) {
-                    self.endPicker._o.field.focus();
-                }
-            }
-        }));
-
-        this.endPicker = new Pikaday(extendPlus(opts.end, {
-            onOpen: function(cancelled) {
-                updateRange(self.endPicker, null, self.endPicker.getDate());
-            },
-            onSelect: function() {
-                self.endDate = self.endPicker.getDate();
-                updateEndDate();
-            }
-        }));
-
-
-        function handleOver(start) {
-            return function(event) {
-                var $target = $(event.currentTarget);
-                var date = new Date($target.data('pika-year'), $target.data('pika-month'), $target.data('pika-day'));
-
-                var picker = start ? self.startPicker : self.endPicker;
-                clearTimeout(picker.delay);
-                if (start) {
-                    updateRange(picker, date);
-                } else {
-                    updateRange(picker, null, date);
-                }
-            }
-        }
-
-        function handleOut(start) {
-            return function(event) {
-                console.log('Handle out');
-                var $target = $(event.currentTarget);
-
-                var picker = start ? self.startPicker : self.endPicker;
-                clearTimeout(picker.delay);
-                picker.delay = setTimeout(function() {
-                    if (start) {
-                        updateRange(picker, picker.getDate());
+                    if (endField && !options.trigger && isStart()) {
+                        endField.focus();
                     } else {
-                        updateRange(picker, null, picker.getDate());
+                        isEditingStart = !isEditingStart;
+                        this._o.field = isEditingStart ? startField : endField;
+                        if (!isEditingStart) {
+                            this.show();
+                        }
                     }
-                }, 200);
+                }
+            },
+            onOpen: function() {
+                console.log('Opened picker');
+            },
+            onInit: function() {
+                var picker = this;
+                if (picker._o.field === picker._o.trigger) {
+                    var superOnInputFocus = picker._onInputFocus;
+                    picker._onInputFocus = function(event)
+                    {
+                        picker._o.field = event.target;
+                        picker._o.trigger = event.target;
+                        isEditingStart = event.target == startField;
+
+                        superOnInputFocus.call(this, event);
+                        picker._onInputChange(event);
+                    };
+                }
+                var superDestroy = picker.destroy;
+                picker.destroy = function()
+                {
+                    if (startField) {
+                        this._o.field = startField;
+                        this._o.trigger = startField;
+                    }
+                    if (endField) {
+                        removeEvent(endField, 'change', picker._onInputChange);
+                    }
+                    if (endField && picker._o.bound) {
+                        removeEvent(endField, 'click', picker._onInputClick);
+                        removeEvent(endField, 'focus', picker._onInputFocus);
+                        removeEvent(endField, 'blur', picker._onInputBlur);
+                        removeEvent(endField, 'keydown', picker._onKeyChange);
+                    }
+                    superDestroy.call(this);
+                };
+            }
+        });
+
+        var picker = new Pikaday(pickerOptions);
+
+        if (endField) {
+            addEvent(endField, 'change', picker._onInputChange);
+        }
+        if (endField && picker._o.bound && picker._o.field == picker._o.trigger) {
+            addEvent(endField, 'click', picker._onInputClick);
+            addEvent(endField, 'focus', picker._onInputFocus);
+            addEvent(endField, 'blur', picker._onInputBlur);
+            addEvent(endField, 'keydown', picker._onKeyChange);
+        }
+
+
+        this._handleOver = function(event) {
+            var $target = $(event.currentTarget);
+            var date = new Date($target.data('pika-year'), $target.data('pika-month'), $target.data('pika-day'));
+            clearTimeout(picker.delay);
+            if (isStart()) {
+                picker.setStartRange(date);
+            } else {
+                picker.setEndRange(date);
             }
         }
 
-        // show range on mouse over
-        // (we use jquery here to avoid complex event handling)
+        this._handleOut = function(event) {
+            clearTimeout(picker.delay);
+            picker.delay = setTimeout(function() {
+                picker.setStartRange(picker._o.startRange);
+                picker.setEndRange(picker._o.endRange);
+            }, 200);
+        }
         if ($) {
-            $(this.startPicker.el).on('mouseenter', '.pika-button', handleOver(true));
-            $(this.endPicker.el).on('mouseenter', '.pika-button', handleOver(false));
-            $(this.startPicker.el).on('mouseleave', '.pika-button', handleOut(true));
-            $(this.endPicker.el).on('mouseleave', '.pika-button', handleOut(false));
+            $(picker.el).on('mouseenter', '.pika-button', this._handleOver);
+            $(picker.el).on('mouseleave', '.pika-button', this._handleOut);
         }
 
 
-
-        var _startDate = this.startPicker._d,
-            _endDate = this.endPicker._d;
-
-        if (_startDate) {
-            this.startDate = _startDate;
-            updateStartDate();
-        }
-
-        if (_endDate) {
-            this.endDate = _endDate;
-            updateEndDate();
-        }
-
+        return picker;
     };
 
 
-    /**
-     * public Pikarange API
-     */
-    Pikarange.prototype = {
 
 
-        /**
-         * configure functionality
-         */
-        config: function(conf)
-        {
-            var options = extend({}, defaults, true);
-            options = extend(options, conf, true);
-
-            var startOptions = del(options, 'start') || {},
-                endOptions = del(options, 'end') || {};
-
-            this._o = {
-                defaultRange: del(options, 'defaultRange'),
-                minRange: del(options, 'minRange'),
-                maxRange: del(options, 'maxRange'),
-                start: extend({}, options, true),
-                end: extend({}, options, true)
-            };
-
-            extend(this._o.start, startOptions);
-            extend(this._o.end, endOptions);
-
-            return this._o;
-        },
-
-        /**
-         * return a formatted string of the current selection (using Moment.js if available)
-         */
-        toString: function(format)
-        {
-            return this.startPicker.toString(format) + ' - ' + this.endPicker.toString(format);
-        },
-
-        /**
-         * return the start Date object
-         */
-        getStartDate: function()
-        {
-            return this.startPicker.getDate();
-        },
-
-
-        /**
-         * return the end Date object
-         */
-        getStartDate: function()
-        {
-            return this.endPicker.getDate();
-        },
-
-
-
-        /**
-         * GAME OVER
-         */
-        destroy: function()
-        {
-            this.startPicker.destroy();
-            this.endPicker.destroy();
-        }
-
-    };
 
     return Pikarange;
 

@@ -42,8 +42,8 @@
     <script>
         var range = new Pikarange({
             numberOfMonths: 2,
-            start: {field: document.getElementById('start')},
-            end: {field: document.getElementById('end')},
+            start: document.getElementById('start'),
+            end: document.getElementById('end'),
             minDate: new Date(),
             maxDate: new Date(2020, 12, 31),
             positionTarget: document.getElementById('group'),
