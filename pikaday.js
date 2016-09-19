@@ -524,9 +524,17 @@
         {
             e = e || window.event;
 
+            // once user start key navigation, we'll handle some things differently
+            // (like setting the focus into the picker)
             function captureKey() {
                 self.hasKey = true;
+                stopEvent();
+            }
+            // a gui component should stop propagation of action keys
+            // (compare to select)
+            function stopEvent() {
                 e.preventDefault();
+                e.stopPropagation();
             }
 
             if (self.isVisible()) {
@@ -541,6 +549,7 @@
                     case 32: /* SPACE */
                     case 13: /* ENTER */
                         if (self.hasKey && !opts.container) {
+                            stopEvent();
                             if (self._o.trigger) {
                                 self._o.trigger.focus();
                                 self._o.trigger.select();
@@ -550,6 +559,7 @@
                         break;
                     case 27: /* ESCAPE */
                         if (!opts.container) {
+                            stopEvent();
                             self.cancel();
                         }
                         break;
