@@ -169,6 +169,8 @@
 
         var picker = new Pikaday(pickerOptions);
 
+        picker.el.className += ' pika-range';
+
         if (endField) {
             addEvent(endField, 'change', picker._onInputChange);
         }
