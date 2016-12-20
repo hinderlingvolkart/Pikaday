@@ -20,29 +20,35 @@
         .pika-lendar {
             width: 320px;
         }
-        .is-startrange .pika-button {
+        .is-startrange .pika-button,
+        .is-endrange .pika-button {
             background: #D5E9F7;
             color: black;
+        }
+        .pika-start .is-startrange .pika-button,
+        .pika-end .is-endrange .pika-button {
+            background: #33aaff;
+            color: white;
         }
     </style>
 </head>
 <body>
     <a href="https://github.com/dbushell/Pikaday"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
 
-    <h1>Pikaday - Container example</h1>
+    <h1>Pikaday - Range with two pickers</h1>
 
-    <p class="large">A refreshing JavaScript Datepicker — lightweight, no dependencies, modular CSS.</p>
+    <p class="large">Check out Pikarange for a single range picker. This one is for trickier range picking, like when only a handful of dates are available to pick from.</p>
 
     <div>
         <div class="flow-element">
             <label for="datepicker1">Date:</label>
             <input type="text" id="datepicker1">
-            <div id="container1"></div>
+            <div id="container1" class="pika-start"></div>
         </div>
         <div class="flow-element">
             <label for="datepicker2">Date:</label>
             <input type="text" id="datepicker2">
-            <div id="container2"></div>
+            <div id="container2" class="pika-end"></div>
         </div>
     </div>
 
@@ -105,7 +111,7 @@
         extend({
             field: document.getElementById('datepicker2'),
             disableDayFn: function(date) {
-                return enabled1.indexOf(date.getDate()) < 0;
+                return enabled2.indexOf(date.getDate()) < 0;
             },
             container: document.getElementById('container2'),
             onSelect: function(date) {
@@ -118,9 +124,13 @@
         var startDate = picker1._d;
         var endDate = picker2._d;
         if (endDate && startDate) {
+            picker1.setStartRange(startDate);
+            picker1.setEndRange(endDate);
             picker2.setStartRange(startDate);
             picker2.setEndRange(endDate);
         } else {
+            picker1.setStartRange(null);
+            picker1.setEndRange(null);
             picker2.setStartRange(null);
             picker2.setEndRange(null);
         }
