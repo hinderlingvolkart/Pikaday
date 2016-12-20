@@ -1314,7 +1314,7 @@
             };
 
             dayConfig.text = opts.textFn ? opts.textFn.call(this, dayConfig) : dayNumber;
-            dayConfig.label = opts.labelFn ? opts.labelFn.call(this, dayConfig) : date.toDateString();
+            dayConfig.label = opts.labelFn ? opts.labelFn.call(this, dayConfig) : day.toDateString();
 
             return dayConfig;
         },
