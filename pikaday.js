@@ -229,6 +229,8 @@
         // the default flag for moment's strict date parsing
         formatStrict: false,
 
+        disableDayFn: null,
+
         labelFn: function(day) {
             var text = hasMoment ? moment(day.date).format('dddd – LL') : day.date.toDateString();
             if (day.isToday) {
@@ -442,10 +444,10 @@
         }
 
         if (c === 0) {
-            html += '<button class="pika-prev' + (prev ? '' : ' is-disabled') + '" type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.previousMonth + '</button>';
+            html += '<button class="pika-prev' + (prev ? '' : ' is-disabled') + '" ' + (prev ? '' : 'disabled ') + 'type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.previousMonth + '</button>';
         }
         if (c === (instance._o.numberOfMonths - 1) ) {
-            html += '<button class="pika-next' + (next ? '' : ' is-disabled') + '" type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.nextMonth + '</button>';
+            html += '<button class="pika-next' + (next ? '' : ' is-disabled') + '" ' + (next ? '' : 'disabled ') + 'type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.nextMonth + '</button>';
         }
 
         return html += '</div>';
@@ -758,6 +760,10 @@
     var now = new Date();
     setToStartOfDay(now);
 
+    Pikaday.setMoment = function(m) {
+        moment = m;
+        hasMoment = typeof moment === 'function';
+    };
 
     /**
      * public Pikaday API
@@ -858,6 +864,24 @@
         {
             return isDate(this._d) ? new Date(this._d.getTime()) : new Date();
         },
+
+        /**
+         * return a Date object of the current selection
+         */
+        getSelectedDate: function()
+        {
+            return isDate(this._d) ? new Date(this._d.getTime()) : null;
+        },
+
+
+        /**
+         * return a Date object of the current selection
+         */
+        getVisibleDate: function()
+        {
+            return new Date(this.calendars[0].year, this.calendars[0].month, 1);
+        },
+
 
         /**
          * set the current selection
@@ -1177,7 +1201,7 @@
 
             var label = this.getLabel();
 
-            if (this._o.field && this._o.trigger == this._o.field) {
+            if (this._o.field && this._o.trigger == this._o.field && opts.bound) {
                 this._o.field.setAttribute('aria-label', label);
             }
 
