@@ -107,6 +107,18 @@
             return isEditingStart;
         }
 
+        function setField(field) {
+            var pickerOptions = picker._o;
+            if (pickerOptions.field !== field) {
+                pickerOptions.field = field;
+                pickerOptions.trigger = field;
+                if (typeof pickerOptions.onFieldChange === 'function') {
+                    pickerOptions.onFieldChange.call(picker);
+                }
+            }
+            isEditingStart = field == startField;
+        }
+
         extendCallbacks(pickerOptions, {
             onSelect: function() {
                 if (isStart()) {
@@ -116,13 +128,12 @@
                 }
             },
             onClose: function(cancelled) {
-                console.log('Closed picker');
                 if (!cancelled) {
                     if (endField && !options.trigger && isStart()) {
                         endField.focus();
                     } else {
                         isEditingStart = !isEditingStart;
-                        this._o.field = isEditingStart ? startField : endField;
+                        setField(isEditingStart ? startField : endField);
                         if (!isEditingStart) {
                             this.show();
                         }
@@ -130,7 +141,6 @@
                 }
             },
             onOpen: function() {
-                console.log('Opened picker');
             },
             onInit: function() {
                 var picker = this;
@@ -138,9 +148,7 @@
                     var superOnInputFocus = picker._onInputFocus;
                     picker._onInputFocus = function(event)
                     {
-                        picker._o.field = event.target;
-                        picker._o.trigger = event.target;
-                        isEditingStart = event.target == startField;
+                        setField(event.target);
 
                         superOnInputFocus.call(this, event);
                         picker._onInputChange(event);
@@ -150,8 +158,7 @@
                 picker.destroy = function()
                 {
                     if (startField) {
-                        this._o.field = startField;
-                        this._o.trigger = startField;
+                        setField(startField);
                     }
                     if (endField) {
                         removeEvent(endField, 'change', picker._onInputChange);

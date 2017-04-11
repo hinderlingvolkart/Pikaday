@@ -484,7 +484,7 @@
                     if (opts.bound) {
                         sto(function() {
                             self.hide();
-                        }, 100);
+                        }, 200);
                     }
                 } else
                 if (hasClass(target, 'pika-prev')) {
@@ -631,13 +631,26 @@
             // }
         };
 
+        self._onTouch = function(event)
+        {
+            if (!self.isVisible() || (event.target !== opts.field)) {
+                self.touched = true;
+            }
+        };
+
         self._onInputFocus = function(event)
         {
+            if (self.touched && opts.field) {
+                opts.field.blur();
+                self.touched = false;
+                self.focusInside = true;
+            }
             self.show();
         };
 
         self._onInputClick = function()
         {
+            self.touched = false;
             self.show();
         };
 
@@ -656,6 +669,7 @@
             while ((pEl = pEl.parentNode));
 
             if (!self._c) {
+                clearTimeout(self._b);
                 self._b = sto(function() {
                     self.hide(true);
                 }, 50);
@@ -749,6 +763,7 @@
             this.hide();
             self.el.className += ' is-bound';
             addEvent(opts.trigger, 'click', self._onInputClick);
+            addEvent(document, 'touchstart', self._onTouch);
             addEvent(opts.trigger, 'focus', self._onInputFocus);
             addEvent(opts.trigger, 'blur', self._onInputBlur);
             addEvent(opts.trigger, 'keydown', self._onKeyChange);
@@ -1139,6 +1154,7 @@
                             if (self.requested.adjustPosition) {
                                 self._adjustPosition();
                             }
+                            self.focusPicker();
                             self.requested = null;
                         })
                     };
@@ -1222,23 +1238,31 @@
                 autofocus = this.el.querySelector('.pika-button');
             }
             autofocus.setAttribute('tabindex', '0');
-            if (this.hasKey) {
-                autofocus.focus();
-            }
-
-            if (opts.bound) {
-                if(opts.field.type !== 'hidden') {
-                    sto(function() {
-                        if (self.hasKey) {
-                            self.el.querySelector('.pika-button[tabindex="0"]').focus();
-                        }
-                    }, 1);
-                }
-            }
 
             if (typeof this._o.onDraw === 'function') {
                 this._o.onDraw(this);
             }
+        },
+
+        focusPicker: function() {
+            var self = this;
+            var opts = this._o;
+
+            if (!this.hasKey && !this.focusInside) {
+                return;
+            }
+
+            self.el.querySelector('.pika-button[tabindex="0"]').focus();
+
+            if (opts.bound) {
+                if(opts.field.type !== 'hidden') {
+                    sto(function() {
+                        self.el.querySelector('.pika-button[tabindex="0"]').focus();
+                    }, 1);
+                }
+            }
+
+            this.focusInside = false;
         },
 
         adjustPosition: function()
@@ -1424,6 +1448,7 @@
                     this.adjustPosition();
                 }
                 if (this._o.field) {
+                    addClass(this._o.field, 'is-visible-pikaday');
                     this.recentValue = this._o.field.value;
                 }
                 if (typeof this._o.onOpen === 'function') {
@@ -1454,6 +1479,9 @@
                 if (this._o.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
                 }
+                if (this._o.field) {
+                    removeClass(this._o.field, 'is-visible-pikaday');
+                }
                 this.el.style.position = 'static'; // reset
                 this.el.style.left = 'auto';
                 this.el.style.top = 'auto';
@@ -1479,6 +1507,7 @@
                 removeEvent(this._o.field, 'change', this._onInputChange);
                 if (this._o.bound) {
                     removeEvent(this._o.trigger, 'click', this._onInputClick);
+                    removeEvent(document, 'touchstart', this._onTouch);
                     removeEvent(this._o.trigger, 'focus', this._onInputFocus);
                     removeEvent(this._o.trigger, 'blur', this._onInputBlur);
                     removeEvent(this._o.trigger, 'keydown', this._onKeyChange);
