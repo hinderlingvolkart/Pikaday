@@ -2,32 +2,24 @@
  * Pikaday
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
- * Copyright © 2016 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
+ * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
+/* eslint-disable */
 
 (function (root, factory)
 {
     'use strict';
 
-    var moment;
     if (typeof exports === 'object') {
         // CommonJS module
-        // Load moment.js as an optional dependency
-        try { moment = require('moment'); } catch (e) {}
-        module.exports = factory(moment);
+        module.exports = factory();
     } else if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
-        define(function (req)
-        {
-            // Load moment.js as an optional dependency
-            var id = 'moment';
-            try { moment = req(id); } catch (e) {}
-            return factory(moment);
-        });
+        define(factory);
     } else {
-        root.Pikaday = factory(root.moment);
+        root.Pikaday = factory();
     }
-}(this, function (moment)
+}(this, function ()
 {
     'use strict';
 
@@ -35,9 +27,11 @@
      * feature detection and helper functions
      */
 
-    var hasMoment = typeof moment === 'function',
+    var log = function() {
+        console.log.apply(console, arguments);
+    }
 
-    hasEventListeners = !!window.addEventListener,
+    var hasEventListeners = !!window.addEventListener,
 
     document = window.document,
 
@@ -180,6 +174,7 @@
         return calendar;
     },
 
+
     containsElement = function(container, element) {
         while (element) {
             if (container === element) {
@@ -215,7 +210,14 @@
         reposition: true,
 
         // the default output format for `.toString()` and `field` value
-        format: 'YYYY-MM-DD',
+        // a function(date) { return string }
+        formatFn: function(date) {
+            return date.toLocaleDateString(this._o.i18n.language, {year: 'numeric', month: 'short', day: 'numeric', weekday: 'short'});
+        },
+
+        parseFn: function(value) {
+            return new Date(Date.parse(value));
+        },
 
         // the initial date to view when first opened
         defaultDate: null,
@@ -226,13 +228,12 @@
         // first day of week (0: Sunday, 1: Monday etc)
         firstDay: 0,
 
-        // the default flag for moment's strict date parsing
-        formatStrict: false,
-
         disableDayFn: null,
 
         labelFn: function(day) {
-            var text = hasMoment ? moment(day.date).format('dddd – LL') : day.date.toDateString();
+            var dateStr = day.date.toLocaleDateString(this._o.i18n.language, {year: 'numeric', month: 'long', day: 'numeric'});
+            var dayStr = this._o.i18n.weekdays[day.date.getDay()];
+            var text = dayStr + ', ' + dateStr;
             if (day.isToday) {
                 text += ' (' + this._o.i18n.today + ')';
             }
@@ -290,6 +291,7 @@
 
         // internationalization
         i18n: {
+            language: document.querySelector('html').getAttribute('lang') || undefined,
             today: 'Today',
             disabled: 'Disabled',
             help: 'Use arrow keys to choose a date.',
@@ -478,13 +480,16 @@
                 return;
             }
 
+            e.stopPropagation();
+
             if (!hasClass(target, 'is-disabled')) {
                 if (hasClass(target, 'pika-button') && !hasClass(target, 'is-empty') && !hasClass(target.parentNode, 'is-disabled')) {
                     self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
                     if (opts.bound) {
                         sto(function() {
+                            log('Hiding because date selected');
                             self.hide();
-                        }, 100);
+                        }, 200);
                     }
                 } else
                 if (hasClass(target, 'pika-prev')) {
@@ -554,56 +559,50 @@
                             stopEvent();
                             if (self._o.trigger) {
                                 self._o.trigger.focus();
-                                self._o.trigger.select();
+                                try { self._o.trigger.select(); } catch (e) {} // trigger could be a button
                             }
+                            log('Hiding because enter or space pressed');
                             self.hide();
                         }
                         break;
                     case 27: /* ESCAPE */
                         if (!opts.container) {
                             stopEvent();
+                            log('Cancel because escape pressed');
                             self.cancel();
                         }
                         break;
                     case 37: /* LEFT */
                         captureKey();
-                        self.adjustDate('subtract', 1);
+                        self.adjustDate(-1);
                         break;
                     case 38: /* UP */
                         captureKey();
-                        self.adjustDate('subtract', 7);
+                        self.adjustDate(-7);
                         break;
                     case 39: /* RIGHT */
                         captureKey();
-                       self.adjustDate('add', 1);
+                       self.adjustDate(+1);
                         break;
                     case 40: /* DOWN */
                         captureKey();
-                        self.adjustDate('add', 7);
+                        self.adjustDate(+7);
                         break;
                     case 33: /* PAGE_UP */
-                        if (hasMoment) {
-                            captureKey();
-                            self.selectDate(moment(self.getDate()).subtract(1, 'months').toDate());
-                        }
+                        captureKey();
+                        self.adjustMonth(-1);
                         break;
                     case 34: /* PAGE_DOWN */
-                        if (hasMoment) {
-                            captureKey();
-                            self.selectDate(moment(self.getDate()).add(1, 'months').toDate());
-                        }
+                        captureKey();
+                        self.adjustMonth(+1);
                         break;
                     case 35: /* END */
-                        if (hasMoment) {
-                            captureKey();
-                            self.selectDate(moment(self.getDate()).add(1, 'years').toDate());
-                        }
+                        captureKey();
+                        self.adjustYear(+1);
                         break;
                     case 36: /* HOME */
-                        if (hasMoment) {
-                            captureKey();
-                            self.selectDate(moment(self.getDate()).subtract(1, 'years').toDate());
-                        }
+                        captureKey();
+                        self.adjustYear(-1);
                         break;
                 }
             }
@@ -616,28 +615,34 @@
             if (e.firedBy === self) {
                 return;
             }
-            if (hasMoment) {
-                date = moment(opts.field.value, opts.format, opts.formatStrict);
-                date = (date && date.isValid()) ? date.toDate() : null;
-            }
-            else {
-                date = new Date(Date.parse(opts.field.value));
-            }
+            date = opts.parseFn.call(self, opts.field.value);
             if (isDate(date)) {
               self.setDate(date);
             }
-            // if (!self._v) {
-            //     self.show();
-            // }
+        };
+
+        self._onTouch = function(event)
+        {
+            if (!self.isVisible() || (event.target !== opts.field)) {
+                self.touched = true;
+            }
         };
 
         self._onInputFocus = function(event)
         {
+            if (self.touched && opts.field && opts.field.nodeName === 'INPUT') {
+                opts.field.blur();
+                self.touched = false;
+                self.focusInside = true;
+            }
+            log("Showing because input was focused", event.target);
             self.show();
         };
 
-        self._onInputClick = function()
+        self._onInputClick = function(event)
         {
+            self.touched = false;
+            log("Showing because input was clicked", event.target);
             self.show();
         };
 
@@ -656,9 +661,13 @@
             while ((pEl = pEl.parentNode));
 
             if (!self._c) {
+                clearTimeout(self._b);
                 self._b = sto(function() {
+                    log("Closed after blurred timeout", self._b);
                     self.hide(true);
                 }, 50);
+                log('self', self);
+                log("Hiding soon because input was blured", event.target, self._b);
             }
             self._c = false;
         };
@@ -687,6 +696,7 @@
             }
             while ((pEl = pEl.parentNode));
             if (self._v && target !== opts.trigger && pEl !== opts.trigger) {
+                log('Hiding because of document click');
                 self.hide(true);
             }
         };
@@ -706,29 +716,18 @@
         self.speakEl.setAttribute('aria-live', 'assertive');
         self.speakEl.setAttribute('aria-atomic', 'true');
         self.speakEl.setAttribute('style', 'position: absolute; left: -9999px; opacity: 0;');
-        document.body.appendChild(self.speakEl);
 
         addEvent(self.el, 'mousedown', self._onClick, true);
         addEvent(self.el, 'touchend', self._onClick, true);
         addEvent(self.el, 'change', self._onChange);
         addEvent(self.el, 'keydown', self._onKeyChange);
 
+
         if (opts.field) {
-            if (opts.container) {
-                opts.container.appendChild(self.el);
-            } else if (opts.bound) {
-                document.body.appendChild(self.el);
-            } else {
-                opts.field.parentNode.insertBefore(self.el, opts.field.nextSibling);
-            }
             addEvent(opts.field, 'change', self._onInputChange);
 
             if (!opts.defaultDate) {
-                if (hasMoment && opts.field.value) {
-                    opts.defaultDate = moment(opts.field.value, opts.format).toDate();
-                } else {
-                    opts.defaultDate = new Date(Date.parse(opts.field.value));
-                }
+                opts.defaultDate = opts.parseFn.call(self, opts.field.value);
                 opts.setDefaultDate = true;
             }
         }
@@ -746,24 +745,22 @@
         }
 
         if (opts.bound) {
+            log('Hiding initially');
             this.hide();
             self.el.className += ' is-bound';
             addEvent(opts.trigger, 'click', self._onInputClick);
+            addEvent(document, 'touchstart', self._onTouch);
             addEvent(opts.trigger, 'focus', self._onInputFocus);
             addEvent(opts.trigger, 'blur', self._onInputBlur);
             addEvent(opts.trigger, 'keydown', self._onKeyChange);
         } else {
+            log('Showing initially');
             this.show();
         }
     };
 
     var now = new Date();
     setToStartOfDay(now);
-
-    Pikaday.setMoment = function(m) {
-        moment = m;
-        hasMoment = typeof moment === 'function';
-    };
 
     /**
      * public Pikaday API
@@ -832,30 +829,19 @@
         },
 
         /**
-         * return a formatted string of the current selection (using Moment.js if available)
+         * return a formatted string of the current selection
          */
-        toString: function(format)
+        toString: function()
         {
-            return !isDate(this._d) ? '' : hasMoment ? moment(this._d).format(format || this._o.format) : this._d.toDateString();
-        },
-
-        /**
-         * return a Moment.js object of the current selection (if available)
-         */
-        getMoment: function()
-        {
-            return hasMoment ? moment(this._d) : null;
-        },
-
-        /**
-         * set the current selection from a Moment.js object (if available)
-         */
-        setMoment: function(date, preventOnSelect)
-        {
-            if (hasMoment && moment.isMoment(date)) {
-                this.setDate(date.toDate(), preventOnSelect);
+            if (!isDate(this._d)) {
+                return '';
             }
+            if (typeof this._o.formatFn == 'function') {
+                return this._o.formatFn.call(this, this._d);
+            }
+            return this._d.toDateString();
         },
+
 
         /**
          * return a Date object of the current selection with fallback for the current date
@@ -986,27 +972,11 @@
             this.adjustCalendars();
         },
 
-        adjustDate: function(sign, days) {
-
+        adjustDate: function(days) {
             var day = this.getDate();
-            var difference = parseInt(days)*24*60*60*1000;
-
-            var newDay;
-
-            if (sign === 'add') {
-                newDay = new Date(day.valueOf() + difference);
-            } else if (sign === 'subtract') {
-                newDay = new Date(day.valueOf() - difference);
-            }
-
-            if (hasMoment) {
-                if (sign === 'add') {
-                    newDay = moment(day).add(days, "days").toDate();
-                } else if (sign === 'subtract') {
-                    newDay = moment(day).subtract(days, "days").toDate();
-                }
-            }
-
+            var difference = parseInt(days);
+            var newDay = new Date(day.valueOf());
+            newDay.setDate(newDay.getDate() + difference);
             this.selectDate(newDay);
         },
 
@@ -1139,6 +1109,7 @@
                             if (self.requested.adjustPosition) {
                                 self._adjustPosition();
                             }
+                            self.focusPicker();
                             self.requested = null;
                         })
                     };
@@ -1222,23 +1193,31 @@
                 autofocus = this.el.querySelector('.pika-button');
             }
             autofocus.setAttribute('tabindex', '0');
-            if (this.hasKey) {
-                autofocus.focus();
-            }
-
-            if (opts.bound) {
-                if(opts.field.type !== 'hidden') {
-                    sto(function() {
-                        if (self.hasKey) {
-                            self.el.querySelector('.pika-button[tabindex="0"]').focus();
-                        }
-                    }, 1);
-                }
-            }
 
             if (typeof this._o.onDraw === 'function') {
                 this._o.onDraw(this);
             }
+        },
+
+        focusPicker: function() {
+            var self = this;
+            var opts = this._o;
+
+            if (!this.hasKey && !this.focusInside) {
+                return;
+            }
+
+            self.el.querySelector('.pika-button[tabindex="0"]').focus();
+
+            if (opts.bound) {
+                if(opts.field.type !== 'hidden') {
+                    sto(function() {
+                        self.el.querySelector('.pika-button[tabindex="0"]').focus();
+                    }, 1);
+                }
+            }
+
+            this.focusInside = false;
         },
 
         adjustPosition: function()
@@ -1319,7 +1298,7 @@
                 isDisabled = (opts.minDate && day < opts.minDate) ||
                              (opts.maxDate && day > opts.maxDate) ||
                              (opts.disableWeekends && isWeekend(day)) ||
-                             (opts.disableDayFn && opts.disableDayFn(day));
+                             (opts.disableDayFn && opts.disableDayFn.call(this, day));
 
 
 
@@ -1414,6 +1393,19 @@
 
         show: function()
         {
+            var opts = this._o;
+
+            document.body.appendChild(this.speakEl);
+            if (opts.field) {
+                if (opts.container) {
+                    opts.container.appendChild(this.el);
+                } else if (opts.bound) {
+                    document.body.appendChild(this.el);
+                } else {
+                    opts.field.parentNode.insertBefore(this.el, opts.field.nextSibling);
+                }
+            }
+
             clearTimeout(this._b);
             if (!this.isVisible()) {
                 removeClass(this.el, 'is-hidden');
@@ -1424,6 +1416,7 @@
                     this.adjustPosition();
                 }
                 if (this._o.field) {
+                    addClass(this._o.field, 'is-visible-pikaday');
                     this.recentValue = this._o.field.value;
                 }
                 if (typeof this._o.onOpen === 'function') {
@@ -1440,9 +1433,10 @@
             if (field) {
                 field.value = this.recentValue;
             }
-            if (field) {
+            try {
                 field.select();
-            }
+            } catch (e) {}
+            log('Hiding because cancelled');
             this.hide(true);
         },
 
@@ -1454,13 +1448,20 @@
                 if (this._o.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
                 }
-                this.el.style.position = 'static'; // reset
-                this.el.style.left = 'auto';
-                this.el.style.top = 'auto';
-                addClass(this.el, 'is-hidden');
+                if (this._o.field) {
+                    removeClass(this._o.field, 'is-visible-pikaday');
+                }
+                if (this._o.bound) {
+                    if (this.el.parentNode) {
+                        this.el.parentNode.removeChild(this.el);
+                    }
+                }
                 this._v = false;
                 if (v !== undefined && typeof this._o.onClose === 'function') {
                     this._o.onClose.call(this, cancelled);
+                }
+                if (this.speakEl.parentNode) {
+                    document.body.removeChild(this.speakEl);
                 }
             }
         },
@@ -1471,22 +1472,19 @@
         destroy: function()
         {
             this.hide();
-            removeEvent(this.el, 'mousedown', this._onMouseDown, true);
-            removeEvent(this.el, 'touchend', this._onMouseDown, true);
+            removeEvent(this.el, 'mousedown', this._onClick, true);
+            removeEvent(this.el, 'touchend', this._onClick, true);
             removeEvent(this.el, 'change', this._onChange);
             removeEvent(this.el, 'keydown', this._onKeyChange);
             if (this._o.field) {
                 removeEvent(this._o.field, 'change', this._onInputChange);
                 if (this._o.bound) {
                     removeEvent(this._o.trigger, 'click', this._onInputClick);
+                    removeEvent(document, 'touchstart', this._onTouch);
                     removeEvent(this._o.trigger, 'focus', this._onInputFocus);
                     removeEvent(this._o.trigger, 'blur', this._onInputBlur);
                     removeEvent(this._o.trigger, 'keydown', this._onKeyChange);
                 }
-            }
-            document.body.removeChild(this.speakEl);
-            if (this.el.parentNode) {
-                this.el.parentNode.removeChild(this.el);
             }
         }
 

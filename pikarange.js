@@ -1,33 +1,30 @@
 /*!
  * Pikarange
  *
- * Copyright © 2016 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
+ * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
+/* eslint-disable */
 
 (function (root, factory)
 {
     'use strict';
 
-    var moment, Pikaday;
+    var Pikaday;
     if (typeof exports === 'object') {
         // CommonJS module
-        // Load moment.js as an optional dependency
         Pikaday = require('pikaday');
-        try { moment = require('moment'); $ = require('jquery'); } catch (e) {}
-        module.exports = factory(Pikaday, moment, $);
+        module.exports = factory(Pikaday);
     } else if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
         define(function (req)
         {
             Pikaday = require('pikaday');
-            // Load moment.js as an optional dependency
-            try { moment = require('moment'); $ = require('jquery'); } catch (e) {}
-            return factory(Pikaday, moment, $);
+            return factory(Pikaday);
         });
     } else {
-        root.Pikarange = factory(root.Pikaday, root.moment, root.jQuery);
+        root.Pikarange = factory(root.Pikaday);
     }
-}(this, function (Pikaday, moment, $)
+}(this, function (Pikaday)
 {
     'use strict';
 
@@ -35,9 +32,8 @@
      * feature detection and helper functions
      */
 
-    var hasMoment = typeof moment === 'function',
 
-    hasEventListeners = !!window.addEventListener,
+    var hasEventListeners = !!window.addEventListener,
 
     document = window.document,
 
@@ -61,6 +57,27 @@
         }
     },
 
+    trim = function(str)
+    {
+        return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g,'');
+    },
+
+    hasClass = function(el, cn)
+    {
+        return (' ' + el.className + ' ').indexOf(' ' + cn + ' ') !== -1;
+    },
+
+    addClass = function(el, cn)
+    {
+        if (!hasClass(el, cn)) {
+            el.className = (el.className === '') ? cn : el.className + ' ' + cn;
+        }
+    },
+
+    removeClass = function(el, cn)
+    {
+        el.className = trim((' ' + el.className + ' ').replace(' ' + cn + ' ', ' '));
+    },
 
 
     extendCallback = function(src, dst, name) {
@@ -107,22 +124,46 @@
             return isEditingStart;
         }
 
+        function setField(field) {
+            var pickerOptions = picker._o;
+            if (pickerOptions.field !== field) {
+                pickerOptions.field = field;
+                pickerOptions.trigger = field;
+                if (typeof pickerOptions.onFieldChange === 'function') {
+                    pickerOptions.onFieldChange.call(picker);
+                }
+            }
+            isEditingStart = field == startField;
+            if (isEditingStart) {
+                addClass(picker.el, 'is-start');
+                removeClass(picker.el, 'is-end');
+            } else {
+                addClass(picker.el, 'is-end');
+                removeClass(picker.el, 'is-start');
+            }
+        }
+
         extendCallbacks(pickerOptions, {
             onSelect: function() {
                 if (isStart()) {
                     picker.setStartRange(picker._d);
+                    if (this._o.startRange && this._o.endRange && (this._o.endRange - this._o.startRange) < 0) {
+                        picker.setEndRange(addToDate(this._o.startRange, this._o.minRange || 0));
+                    }
                 } else {
                     picker.setEndRange(picker._d);
+                     if (this._o.startRange && this._o.endRange && (this._o.endRange - this._o.startRange) < 0) {
+                        picker.setStartRange(addToDate(this._o.endRange, this._o.minRange || 0));
+                    }
                 }
             },
             onClose: function(cancelled) {
-                console.log('Closed picker');
                 if (!cancelled) {
                     if (endField && !options.trigger && isStart()) {
                         endField.focus();
                     } else {
                         isEditingStart = !isEditingStart;
-                        this._o.field = isEditingStart ? startField : endField;
+                        setField(isEditingStart ? startField : endField);
                         if (!isEditingStart) {
                             this.show();
                         }
@@ -130,7 +171,6 @@
                 }
             },
             onOpen: function() {
-                console.log('Opened picker');
             },
             onInit: function() {
                 var picker = this;
@@ -138,9 +178,7 @@
                     var superOnInputFocus = picker._onInputFocus;
                     picker._onInputFocus = function(event)
                     {
-                        picker._o.field = event.target;
-                        picker._o.trigger = event.target;
-                        isEditingStart = event.target == startField;
+                        setField(event.target);
 
                         superOnInputFocus.call(this, event);
                         picker._onInputChange(event);
@@ -150,8 +188,7 @@
                 picker.destroy = function()
                 {
                     if (startField) {
-                        this._o.field = startField;
-                        this._o.trigger = startField;
+                        setField(startField);
                     }
                     if (endField) {
                         removeEvent(endField, 'change', picker._onInputChange);
@@ -183,8 +220,8 @@
 
 
         this._handleOver = function(event) {
-            var $target = $(event.currentTarget);
-            var date = new Date($target.data('pika-year'), $target.data('pika-month'), $target.data('pika-day'));
+            var targetEl = event.currentTarget;
+            var date = new Date(targetEl.getAttribute('data-pika-year'), targetEl.getAttribute('data-pika-month'), targetEl.getAttribute('data-pika-day'));
             clearTimeout(picker.delay);
             if (isStart()) {
                 picker.setStartRange(date);
@@ -200,11 +237,10 @@
                 picker.setEndRange(picker._o.endRange);
             }, 200);
         }
-        if ($) {
-            $(picker.el).on('mouseenter', '.pika-button', this._handleOver);
-            $(picker.el).on('mouseleave', '.pika-button', this._handleOut);
+        if (window.jQuery) {
+            jQuery(picker.el).on('mouseenter', '.pika-button', this._handleOver);
+            jQuery(picker.el).on('mouseleave', '.pika-button', this._handleOut);
         }
-
 
         return picker;
     };
