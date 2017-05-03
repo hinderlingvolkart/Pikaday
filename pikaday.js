@@ -216,7 +216,7 @@
         if (isDate(date)) date.setHours(0,0,0,0);
     },
 
-    compareDates = function(a,b)
+    areDatesEqual = function(a,b)
     {
         if (a == b) {
             return true;
@@ -585,13 +585,11 @@
 
             if (!hasClass(target, 'is-disabled')) {
                 if (hasClass(target, 'pika-button') && !hasClass(target, 'is-empty') && !hasClass(target.parentNode, 'is-disabled')) {
-                    self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
                     if (opts.bound) {
-                        sto(function() {
-                            log('Hiding because date selected');
-                            self.hide();
-                        }, 200);
+                        this._v && console.log("Hiding soon because date has been selected and picker is bound.");
+                        self.hideAfter(200);
                     }
+                    self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
                 } else
                 if (hasClass(target, 'pika-prev')) {
                     self.prevMonth();
@@ -762,13 +760,8 @@
             while ((pEl = pEl.parentNode));
 
             if (!self._c) {
-                clearTimeout(self._b);
-                self._b = sto(function() {
-                    log("Closed after blurred timeout", self._b);
-                    self.hide(true);
-                }, 50);
-                log('self', self);
-                log("Hiding soon because input was blured", event.target, self._b);
+                this._v && log("Hiding soon because input was blured", event.target, self._b);
+                self.hideAfter(50, true);
             }
             self._c = false;
         };
@@ -1019,6 +1012,8 @@
                 return;
             }
 
+            setToStartOfDay(date);
+
             var min = this._o.minDate,
                 max = this._o.maxDate;
 
@@ -1028,6 +1023,9 @@
                 date = max;
             }
 
+            if (areDatesEqual(this._d, date)) {
+                return;
+            }
             this._d = new Date(date.getTime());
             setToStartOfDay(this._d);
             this.gotoDate(this._d);
@@ -1165,7 +1163,7 @@
         {
             var d;
             try { d = new Date(value); } catch (e) {}
-            if (d instanceof Date) {
+            if (d instanceof Date && d.getTime()) { // d.getTime() === NaN if date is invalid
                 setToStartOfDay(d);
                 this._o.minDate = d;
                 this._o.minYear  = d.getFullYear();
@@ -1186,7 +1184,7 @@
         {
             var d;
             try { d = new Date(value); } catch (e) {}
-            if(d instanceof Date) {
+            if(d instanceof Date && d.getTime()) { // d.getTime() === NaN if date is invalid
                 setToStartOfDay(d);
                 this._o.maxDate = d;
                 this._o.maxYear = d.getFullYear();
@@ -1202,7 +1200,7 @@
 
         setStartRange: function(value)
         {
-            if (!compareDates(this._o.startRange, value)) {
+            if (!areDatesEqual(this._o.startRange, value)) {
                 this._o.startRange = value;
                 this.draw();
                 this.emitEvent('startrange', [this._o.startRange]);
@@ -1211,7 +1209,7 @@
 
         setEndRange: function(value)
         {
-            if (!compareDates(this._o.endRange, value)) {
+            if (!areDatesEqual(this._o.endRange, value)) {
                 this._o.endRange = value;
                 this.draw();
                 this.emitEvent('endrange', [this._o.endRange]);
@@ -1417,13 +1415,13 @@
 
         getDayConfig: function(day) {
             var opts   = this._o,
-                isSelected = isDate(this._d) ? compareDates(day, this._d) : false,
-                isToday = compareDates(day, now),
+                isSelected = isDate(this._d) ? areDatesEqual(day, this._d) : false,
+                isToday = areDatesEqual(day, now),
                 dayNumber = day.getDate(),
                 monthNumber = day.getMonth(),
                 yearNumber = day.getFullYear(),
-                isStartRange = opts.startRange && compareDates(opts.startRange, day),
-                isEndRange = opts.endRange && compareDates(opts.endRange, day),
+                isStartRange = opts.startRange && areDatesEqual(opts.startRange, day),
+                isEndRange = opts.endRange && areDatesEqual(opts.endRange, day),
                 isInRange = opts.startRange && opts.endRange && opts.startRange < day && day < opts.endRange,
                 isDisabled = (opts.minDate && day < opts.minDate) ||
                              (opts.maxDate && day > opts.maxDate) ||
@@ -1524,6 +1522,7 @@
         show: function()
         {
             var opts = this._o;
+            clearTimeout(this.hideTimeout);
 
             document.body.appendChild(this.speakEl);
             if (opts.field) {
@@ -1536,7 +1535,6 @@
                 }
             }
 
-            clearTimeout(this._b);
             if (!this.isVisible()) {
                 removeClass(this.el, 'is-hidden');
                 this._v = true;
@@ -1568,10 +1566,22 @@
             this.hide(true);
         },
 
+        hideAfter: function(delay, cancelled) {
+            var self = this;
+            clearTimeout(this.hideTimeout);
+            if (this._v !== false) {
+                log("Will hide after " + delay + "ms.");
+                this.hideTimeout = sto(function() {
+                    self.hide(cancelled);
+                }, delay);
+            }
+        },
+
         hide: function(cancelled)
         {
             var v = this._v;
             if (v !== false) {
+                clearTimeout(this.hideTimeout);
                 this.hasKey = false;
                 if (this._o.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
