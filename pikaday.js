@@ -761,7 +761,7 @@
 
             if (!self._c) {
                 this._v && log("Hiding soon because input was blured", event.target, self._b);
-                self.hideAfter(50, true);
+                self.hide(true);
             }
             self._c = false;
         };
@@ -1536,6 +1536,7 @@
             }
 
             if (!this.isVisible()) {
+                log('Showing', performance.now());
                 removeClass(this.el, 'is-hidden');
                 this._v = true;
                 this.draw();
@@ -1581,7 +1582,8 @@
         {
             var v = this._v;
             if (v !== false) {
-                clearTimeout(this.hideTimeout);
+                log('Hiding', performance.now());
+               clearTimeout(this.hideTimeout);
                 this.hasKey = false;
                 if (this._o.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
@@ -1608,6 +1610,7 @@
         destroy: function()
         {
             this.hide();
+
             removeEvent(this.el, 'mousedown', this._onClick, true);
             removeEvent(this.el, 'touchend', this._onClick, true);
             removeEvent(this.el, 'change', this._onChange);
@@ -1622,6 +1625,8 @@
                     removeEvent(this._o.trigger, 'keydown', this._onKeyChange);
                 }
             }
+
+            this.emitEvent('destroy');
         }
 
     };

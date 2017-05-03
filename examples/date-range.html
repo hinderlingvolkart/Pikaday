@@ -51,6 +51,12 @@
             <div><label>Start</label><input type="text" class="pikarange-start"></div>
             <div><label>End</label><input type="text" class="pikarange-end"></div>
         </div>
+
+        <h2>"minDate": "2018-05-01", "maxDate": "2018-06-30", "minRange": 14, "maxRange": 28</h2>
+        <div class="pikarange" data-options='{"minDate": "2018-05-01", "maxDate": "2018-06-30", "minRange": 14, "maxRange": 28}'>
+            <div><label>Start</label><input type="text" class="pikarange-start"><button type="button" class="pikarange-start">📅</button></div>
+            <div><label>End</label><input type="text" class="pikarange-end"><button type="button" class="pikarange-end">📅</button></div>
+        </div>
     </div>
 
     <h2>What is this?</h2>
@@ -67,8 +73,14 @@
         document.querySelectorAll('.pikarange').forEach(function(el) {
             var options = {
                 numberOfMonths: 2,
-                start: el.querySelector('.pikarange-start'),
-                end: el.querySelector('.pikarange-end'),
+                start: {
+                    field: el.querySelector('input.pikarange-start'),
+                    trigger: el.querySelector('button.pikarange-start')
+                },
+                end: {
+                    field: el.querySelector('input.pikarange-end'),
+                    trigger: el.querySelector('button.pikarange-end')
+                },
                 positionTarget: el,
                 position: 'bottom center'
             };

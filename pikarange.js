@@ -105,196 +105,141 @@
         return days * 24 * 3600000
     },
 
+    extend = function(out) {
+        out = out || {};
+        for (var o, i = 1; i < arguments.length; i++) {
+            o = arguments[i];
+            if (!o) continue;
+            for (var key in o) {
+                if (o.hasOwnProperty(key)) {
+                    out[key] = o[key];
+                }
+            }
+        }
+        return out;
+    },
+
 
     /**
      * Pikarange constructor
      */
-    Pikarange = function(originalOptions)
+    Pikarange = function(options)
     {
         var self = this;
-        var startField = originalOptions.start;
-        var endField = originalOptions.end;
+        var startOptions = options.start.nodeName ? {field: options.start} : options.start;
+        var endOptions = options.end.nodeName ? {field: options.end} : options.end;
         var minEndDate, maxEndDate;
+        var pickerOptions;
 
-        var pickerOptions = {};
-        for (var i in originalOptions) {
-            pickerOptions[i] = originalOptions[i];
-        }
+        delete options.start;
+        delete options.end;
 
+        pickerOptions = extend({}, options, startOptions, {autoInit: false});
+        var startPicker = new Pikaday(pickerOptions);
 
-        delete pickerOptions.start;
-        delete pickerOptions.end;
+        pickerOptions = extend({}, options, endOptions, {autoInit: false});
+        var endPicker = new Pikaday(pickerOptions);
 
-        pickerOptions.field = startField;
+        function setStartRange(d) {
+            startPicker.setStartRange(d);
+            endPicker.setStartRange(d);
 
-        var isEditingStart = true;
-
-        function isStart() {
-            return isEditingStart;
-        }
-
-        function setField(field) {
-            var pickerOptions = picker._o;
-            if (pickerOptions.field !== field) {
-                pickerOptions.field = field;
-                pickerOptions.trigger = field;
-                if (typeof pickerOptions.onFieldChange === 'function') {
-                    pickerOptions.onFieldChange.call(picker);
-                }
-            }
-            isEditingStart = field == startField;
-            if (isEditingStart) {
-                addClass(picker.el, 'is-start');
-                removeClass(picker.el, 'is-end');
-                picker.setMinDate(originalOptions.minDate);
-                picker.setMaxDate(originalOptions.maxDate);
-            } else {
-                addClass(picker.el, 'is-end');
-                removeClass(picker.el, 'is-start');
-                if (minEndDate) {
-                    picker.setMinDate(minEndDate);
-                }
-                if (maxEndDate) {
-                    picker.setMaxDate(maxEndDate);
-                }
-            }
-        }
-
-
-        var hasAutoInit = pickerOptions.autoInit;
-        pickerOptions.autoInit = false;
-
-        var picker = new Pikaday(pickerOptions);
-
-        picker.on('startrange', function(value) {
-            if (!(value instanceof Date)) {
+            if (!(d instanceof Date) || !d.getTime()) {
                 return;
             }
-            minEndDate = originalOptions.minDate;
+            var minEndDate = options.minDate;
             var time;
-            if (typeof pickerOptions.minRange !== 'undefined') {
-                time = this._o.startRange.getTime() + daysToTime(pickerOptions.minRange);
+            if (typeof endPicker._o.minRange !== 'undefined') {
+                time = d.getTime() + daysToTime(endPicker._o.minRange);
                 if (!minEndDate || minEndDate < time) {
                     minEndDate = new Date(time);
                 }
             }
-            maxEndDate = originalOptions.maxDate;
-            if (typeof pickerOptions.maxRange !== 'undefined') {
-                time = this._o.startRange.getTime() + daysToTime(pickerOptions.maxRange);
+            var maxEndDate = options.maxDate;
+            if (typeof endPicker._o.maxRange !== 'undefined') {
+                time = d.getTime() + daysToTime(endPicker._o.maxRange);
                 if (!maxEndDate || maxEndDate > time) {
                     maxEndDate = new Date(time);
                 }
             }
+            endPicker.setMinDate(minEndDate);
+            endPicker.setMaxDate(maxEndDate);
+        }
+
+        function setEndRange(d) {
+            startPicker.setEndRange(d);
+            endPicker.setEndRange(d);
+        }
+
+
+
+        startPicker.on('select', function() {
+            setStartRange(this._d);
+            delete this.originalRange;
+            (endPicker._o.trigger || endPicker._o.field).focus();
+        });
+        endPicker.on('select', function() {
+            setEndRange(this._d);
+            delete this.originalRange;
         });
 
-        picker.on('select', function() {
-            if (isStart()) {
-                picker.setStartRange(picker._d);
-            } else {
-                picker.setEndRange(picker._d);
-            }
+        startPicker.on('destroy', function() {
+            removeEvent(startPicker.el, 'mouseover', handleStartOver);
+            removeEvent(endPicker.el, 'mouseover', handleEndOver);
+
+            endPicker.destroy();
         });
 
-        picker.on('close', function(cancelled) {
-            if (!cancelled) {
-                if (endField && !originalOptions.trigger && isStart()) {
-                    endField.focus();
-                } else {
-                    isEditingStart = !isEditingStart;
-                    setField(isEditingStart ? startField : endField);
-                    if (!isEditingStart) {
-                        this.show();
+        startPicker.on('init', function() {
+            endPicker.init();
+
+            addEvent(startPicker.el, 'mouseover', handleStartOver);
+            addEvent(endPicker.el, 'mouseover', handleEndOver);
+        });
+
+        var handleStartOver = getPickerOver(startPicker);
+        var handleEndOver = getPickerOver(endPicker);
+
+        function getPickerOver(picker) {
+            return function handlePickerOver(event) {
+                if (!hasClass(event.target, 'pika-button')) {
+                    if (!picker.outDelay && picker.originalRange) {
+                        picker.outDelay = setTimeout(function() {
+                            setStartRange(picker.originalRange[0]);
+                            setEndRange(picker.originalRange[1]);
+                            delete picker.originalRange;
+                            delete picker.outDelay;
+                        }, 200);
                     }
+                    return;
+                }
+                clearTimeout(picker.outDelay);
+                delete picker.outDelay;
+
+                if (typeof picker.originalRange === 'undefined') {
+                    picker.originalRange = [picker._o.startRange, picker._o.endRange];
+                }
+                var targetEl = event.target;
+                console.log(targetEl.getAttribute('data-pika-day'));
+                var date = new Date(targetEl.getAttribute('data-pika-year'), targetEl.getAttribute('data-pika-month'), targetEl.getAttribute('data-pika-day'));
+                if (picker === startPicker) {
+                    setStartRange(date);
+                } else {
+                    setEndRange(date);
                 }
             }
-        });
-
-        picker.on('open', function() {
-        });
-
-        if (picker._o.field === picker._o.trigger) {
-            var superOnInputFocus = picker._onInputFocus;
-            picker._onInputFocus = function(event)
-            {
-                setField(event.target);
-
-                superOnInputFocus.call(this, event);
-                picker._onInputChange(event);
-            };
         }
 
-        var superDestroy = picker.destroy;
-        picker.destroy = function()
-        {
-            if (startField) {
-                setField(startField);
-            }
-            if (endField) {
-                removeEvent(endField, 'change', picker._onInputChange);
-            }
-            if (endField && picker._o.bound) {
-                removeEvent(endField, 'click', picker._onInputClick);
-                removeEvent(endField, 'focus', picker._onInputFocus);
-                removeEvent(endField, 'blur', picker._onInputBlur);
-                removeEvent(endField, 'keydown', picker._onKeyChange);
-            }
-            superDestroy.call(this);
-        };
 
 
-
-
-        picker.on('init', function() {
-            picker.el.className += ' pika-range';
-
-            if (endField) {
-                addEvent(endField, 'change', picker._onInputChange);
-            }
-            if (endField && picker._o.bound && picker._o.field == picker._o.trigger) {
-                addEvent(endField, 'click', picker._onInputClick);
-                addEvent(endField, 'focus', picker._onInputFocus);
-                addEvent(endField, 'blur', picker._onInputBlur);
-                addEvent(endField, 'keydown', picker._onKeyChange);
-            }
-
-            if (window.jQuery) {
-                jQuery(picker.el).on('mouseenter', '.pika-button', handlePickerOver);
-                jQuery(picker.el).on('mouseleave', '.pika-button', handlePickerOut);
-            }
-        });
-
-
-
-        function handlePickerOver(event) {
-            var targetEl = event.currentTarget;
-            var date = new Date(targetEl.getAttribute('data-pika-year'), targetEl.getAttribute('data-pika-month'), targetEl.getAttribute('data-pika-day'));
-            clearTimeout(picker.delay);
-            if (isStart()) {
-                picker.setStartRange(date);
-            } else {
-                picker.setEndRange(date);
-            }
-        }
-
-        function handlePickerOut(event) {
-            clearTimeout(picker.delay);
-            picker.delay = setTimeout(function() {
-                picker.setStartRange(picker._o.startRange);
-                picker.setEndRange(picker._o.endRange);
-            }, 200);
+        if (options.autoInit !== false) {
+            startPicker.init();
         }
 
 
 
 
-        if (hasAutoInit !== false) {
-            picker.init();
-        }
-
-
-
-
-        return picker;
+        return this.startPicker;
     };
 
 
