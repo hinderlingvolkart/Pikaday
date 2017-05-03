@@ -164,6 +164,9 @@
             }
             endPicker.setMinDate(minEndDate);
             endPicker.setMaxDate(maxEndDate);
+            if (!endPicker._d || !endPicker._d.getTime()) {
+                endPicker.gotoDate(d); // better would be limitDate(minEndDate, d, maxEndDate)
+            }
         }
 
         function setEndRange(d) {
@@ -192,9 +195,14 @@
 
         startPicker.on('init', function() {
             endPicker.init();
-
+        });
+        endPicker.on('init', function() {
+            // both have initialised
+            setStartRange(startPicker._d);
+            setEndRange(endPicker._d);
             addEvent(startPicker.el, 'mouseover', handleStartOver);
             addEvent(endPicker.el, 'mouseover', handleEndOver);
+
         });
 
         var handleStartOver = getPickerOver(startPicker);
