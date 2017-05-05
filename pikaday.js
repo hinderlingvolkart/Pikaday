@@ -1,5 +1,5 @@
 /*!
- * Pikaday
+ * PikadayPlus 1.0.1
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -63,6 +63,11 @@
         };
 
         proto.off = function( eventName, listener ) {
+            if (typeof eventName === 'undefined') {
+                delete this._events;
+                delete this._onceEvents;
+                return;
+            }
             var listeners = this._events && this._events[ eventName ];
             if ( !listeners || !listeners.length ) {
                 return;
@@ -1514,6 +1519,19 @@
             return renderTable(opts, data, randId);
         },
 
+        isValid: function() {
+            if (!isDate(this._d)) {
+                return 0;
+            }
+            if (isDate(this._o.minDate) && (this._d < this._o.minDate)) {
+                return false;
+            }
+            if (isDate(this._o.maxDate) && (this._d > this._o.maxDate)) {
+                return false;
+            }
+            return true;
+        },
+
         isVisible: function()
         {
             return this._v;
@@ -1627,6 +1645,7 @@
             }
 
             this.emitEvent('destroy');
+            this.off();
         }
 
     };

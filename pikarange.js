@@ -1,5 +1,5 @@
 /*!
- * Pikarange
+ * Pikarange 1.0.1
  *
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
@@ -177,19 +177,25 @@
 
 
         startPicker.on('select', function() {
-            setStartRange(this._d);
             delete this.originalRange;
+            setStartRange(this._d);
+            if (!endPicker.isValid()) {
+                endPicker.setDate(null);
+                endPicker.gotoDate(this._d);
+            }
             (endPicker._o.trigger || endPicker._o.field).focus();
         });
         endPicker.on('select', function() {
-            setEndRange(this._d);
             delete this.originalRange;
+            setEndRange(this._d);
         });
+
+        startPicker.on('close', function() { delete this.originalRange; });
+        endPicker.on('close', function() { delete this.originalRange; });
 
         startPicker.on('destroy', function() {
             removeEvent(startPicker.el, 'mouseover', handleStartOver);
             removeEvent(endPicker.el, 'mouseover', handleEndOver);
-
             endPicker.destroy();
         });
 
