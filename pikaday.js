@@ -1396,22 +1396,17 @@
                 halign = 0.5;
             }
 
+            left -= (width - field.offsetWidth) * halign;
+
             // default position is bottom & left
-            if ((this._o.reposition && left + width > viewportWidth) ||
-                (
-                    halign &&
-                    left + (field.offsetWidth - width) * halign > 0
-                )
-            ) {
-                left = left + (field.offsetWidth - width) * halign;
-            }
-            if ((this._o.reposition && top + height > viewportHeight + scrollTop) ||
-                (
-                    this._o.position.indexOf('top') > -1 &&
-                    top - height - field.offsetHeight > 0
-                )
-            ) {
-                top = top - height - field.offsetHeight;
+            if (this._o.reposition) {
+                var overflow = {
+                    right: Math.max(0, (left + width) - (viewportWidth - 20)),
+                    left: Math.max(0, 20 - left),
+                    top: Math.max(0, -top)
+                };
+                left += overflow.left - overflow.right;
+                top += overflow.top;
             }
 
             this.el.style.left = left + 'px';
