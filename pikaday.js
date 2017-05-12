@@ -722,6 +722,8 @@
             date = opts.parseFn.call(self, opts.field.value);
             if (isDate(date)) {
               self.setDate(date);
+            } else {
+              self.setDate(null);
             }
         };
 
@@ -1536,6 +1538,10 @@
         {
             var opts = this._o;
             clearTimeout(this.hideTimeout);
+
+            if (this._d) {
+                this.gotoDate(this._d);
+            }
 
             document.body.appendChild(this.speakEl);
             if (opts.field) {
