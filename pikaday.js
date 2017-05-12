@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.1
+ * PikadayPlus 1.0.2
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -1010,6 +1010,8 @@
                     fireEvent(this._o.field, 'change', { firedBy: this });
                 }
 
+                this.emitEvent('change', [this._d]);
+
                 return this.draw();
             }
             if (typeof date === 'string') {
@@ -1033,6 +1035,7 @@
             if (areDatesEqual(this._d, date)) {
                 return;
             }
+
             this._d = new Date(date.getTime());
             setToStartOfDay(this._d);
             this.gotoDate(this._d);
@@ -1044,6 +1047,7 @@
             if (!preventOnSelect) {
                 this.emitEvent('select', [this.getDate()]);
             }
+            this.emitEvent('change', [this._d]);
         },
 
         selectDate: function(date) {
