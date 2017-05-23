@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.2
+ * PikadayPlus 1.0.3
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -915,6 +915,8 @@
             var nom = parseInt(opts.numberOfMonths, 10) || 1;
             opts.numberOfMonths = nom > 4 ? 4 : nom;
 
+            opts.minDate = opts.parseFn.call(self, opts.minDate);
+            opts.maxDate = opts.parseFn.call(self, opts.maxDate);
             if (!isDate(opts.minDate)) {
                 opts.minDate = false;
             }
@@ -1172,9 +1174,8 @@
          */
         setMinDate: function(value)
         {
-            var d;
-            try { d = new Date(value); } catch (e) {}
-            if (d instanceof Date && d.getTime()) { // d.getTime() === NaN if date is invalid
+            var d = this._o.parseFn.call(self, value);
+            if (isDate(d)) { // d.getTime() === NaN if date is invalid
                 setToStartOfDay(d);
                 this._o.minDate = d;
                 this._o.minYear  = d.getFullYear();
@@ -1193,9 +1194,8 @@
          */
         setMaxDate: function(value)
         {
-            var d;
-            try { d = new Date(value); } catch (e) {}
-            if(d instanceof Date && d.getTime()) { // d.getTime() === NaN if date is invalid
+            var d = this._o.parseFn.call(self, value);
+            if (isDate(d)) { // d.getTime() === NaN if date is invalid
                 setToStartOfDay(d);
                 this._o.maxDate = d;
                 this._o.maxYear = d.getFullYear();
