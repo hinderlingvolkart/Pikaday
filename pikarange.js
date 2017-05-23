@@ -191,6 +191,8 @@
                 endPicker.setDate(null);
                 endPicker.gotoDate(this._d);
             }
+        });
+        startPicker.on('select', function() {
             (endPicker._o.trigger || endPicker._o.field).focus();
         });
         endPicker.on('change', function() {
@@ -207,10 +209,10 @@
             endPicker.destroy();
         });
 
-        startPicker.on('init', function() {
-            endPicker.init();
-        });
         endPicker.on('init', function() {
+            startPicker.init();
+        });
+        startPicker.on('init', function() {
             // both have initialised
             setStartRange(startPicker._d);
             setEndRange(endPicker._d);
@@ -258,7 +260,7 @@
 
 
         if (options.autoInit !== false) {
-            startPicker.init();
+            endPicker.init();
         }
 
 
