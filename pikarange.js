@@ -1,5 +1,5 @@
 /*!
- * Pikarange 1.0.2
+ * Pikarange 1.0.3
  *
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
@@ -140,11 +140,14 @@
         pickerOptions = extend({}, options, endOptions, {autoInit: false});
         var endPicker = new Pikaday(pickerOptions);
 
-        function setStartRange(d) {
+        function setStartRange(d, temporary) {
             startPicker.setStartRange(d);
             endPicker.setStartRange(d);
 
             if (!(d instanceof Date) || !d.getTime()) {
+                return;
+            }
+            if (temporary) {
                 return;
             }
             var minEndDate = options.minDate;
@@ -166,6 +169,11 @@
             endPicker.setMaxDate(maxEndDate);
             if (!endPicker._d || !endPicker._d.getTime()) {
                 endPicker.gotoDate(d); // better would be limitDate(minEndDate, d, maxEndDate)
+            } else {
+                if (endPicker._d < minEndDate || endPicker._d > maxEndDate) {
+                    endPicker.setDate(null);
+                    endPicker.gotoDate(d);
+                }
             }
         }
 
@@ -216,11 +224,14 @@
 
         function getPickerOver(picker) {
             return function handlePickerOver(event) {
+                if (startPicker._d && endPicker._d) {
+                    return; // only show "live range" when no range is set
+                }
                 if (!hasClass(event.target, 'pika-button')) {
                     if (!picker.outDelay && picker.originalRange) {
                         picker.outDelay = setTimeout(function() {
-                            setStartRange(picker.originalRange[0]);
-                            setEndRange(picker.originalRange[1]);
+                            setStartRange(picker.originalRange[0], true);
+                            setEndRange(picker.originalRange[1], true);
                             delete picker.originalRange;
                             delete picker.outDelay;
                         }, 200);
@@ -237,9 +248,9 @@
                 console.log(targetEl.getAttribute('data-pika-day'));
                 var date = new Date(targetEl.getAttribute('data-pika-year'), targetEl.getAttribute('data-pika-month'), targetEl.getAttribute('data-pika-day'));
                 if (picker === startPicker) {
-                    setStartRange(date);
+                    setStartRange(date, true);
                 } else {
-                    setEndRange(date);
+                    setEndRange(date, true);
                 }
             }
         }
