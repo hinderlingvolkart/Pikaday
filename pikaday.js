@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.3
+ * PikadayPlus 1.0.4
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -665,6 +665,7 @@
                                 self._o.trigger.focus();
                                 try { self._o.trigger.select(); } catch (e) {} // trigger could be a button
                             }
+                            self.emitEvent('select', [self.getDate()]);
                             log('Hiding because enter or space pressed');
                             self.hide();
                         }
@@ -857,7 +858,7 @@
                 addEvent(opts.trigger, 'click', self._onInputClick);
                 addEvent(document, 'touchstart', self._onTouch);
                 addEvent(opts.trigger, 'focus', self._onInputFocus);
-                addEvent(opts.trigger, 'blur', self._onInputBlur);
+                // addEvent(opts.trigger, 'blur', self._onInputBlur);
                 addEvent(opts.trigger, 'keydown', self._onKeyChange);
             } else {
                 log('Showing initially');
@@ -1052,8 +1053,8 @@
             this.emitEvent('change', [this._d]);
         },
 
-        selectDate: function(date) {
-            this.setDate(date);
+        selectDate: function(date, preventOnSelect) {
+            this.setDate(date, preventOnSelect);
             if (this._d) {
                 this.speak(this.getDayConfig(this._d).label);
             }
@@ -1116,7 +1117,7 @@
             var difference = parseInt(days);
             var newDay = new Date(day.valueOf());
             newDay.setDate(newDay.getDate() + difference);
-            this.selectDate(newDay);
+            this.selectDate(newDay, true);
         },
 
         adjustCalendars: function() {
