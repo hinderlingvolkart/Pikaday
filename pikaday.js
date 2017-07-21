@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.4
+ * PikadayPlus 1.0.5
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -113,7 +113,6 @@
 
         return EvEmitter;
     })();
-
 
 
 
@@ -238,7 +237,6 @@
         return y + '-' + (m.length == 1 ? '0' : '') + m + '-' + (d.length == 1 ? '0' : '') + d;
     },
 
-
     extend = function(to, from, overwrite)
     {
         var prop, hasProp;
@@ -286,6 +284,8 @@
         }
         return false;
     },
+
+
 
     /**
      * defaults and localisation
@@ -337,7 +337,21 @@
         disableDayFn: null,
 
         labelFn: function(day) {
-            var dateStr = day.date.toLocaleDateString(this._o.i18n.language, {year: 'numeric', month: 'long', day: 'numeric'});
+            if (!this.dateFormatter) {
+                try {
+                    this.dateFormatter = window.Intl.DateTimeFormat(this._o.i18n.language, {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    });
+                }
+                catch (e) {
+                    this.dateFormatter = {
+                        format: function(date) {
+                            return date.toDateString();
+                        }
+                    }
+                }
+            }
+            var dateStr = this.dateFormatter.format(day.date);
             var dayStr = this._o.i18n.weekdays[day.date.getDay()];
             var text = dayStr + ', ' + dateStr;
             if (day.isToday) {
@@ -349,9 +363,12 @@
             return text;
         },
 
-        textFn: function(day) {
-            var text = day.day;
-            return text;
+        dayFn: function(day) {
+            return day;
+        },
+
+        renderFn: function(day) {
+            return {}; // text, label, style
         },
 
         // the minimum/earliest date that can be selected
@@ -464,6 +481,9 @@
         if (opts.isEndRange) {
             arr.push('is-endrange');
         }
+        if (opts.classes) {
+            arr.push(opts.classes);
+        }
         return '<td data-day="' + opts.day + '" class="' + arr.join(' ') + '">' +
                  '<button class="pika-button pika-day" type="button" ' +
                     'data-pika-year="' + opts.year + '" data-pika-month="' + opts.month + '" data-pika-day="' + opts.day + '" aria-selected="' + ariaSelected + '" aria-label="' + ariaLabel + '" tabindex="' + tabindex + '">' +
@@ -575,6 +595,7 @@
         var self = this,
             opts = self.config(options);
 
+
         self._onClick = function(e)
         {
             if (!self._v) {
@@ -639,6 +660,7 @@
             // (like setting the focus into the picker)
             function captureKey() {
                 self.hasKey = true;
+                self.focusInside = true;
                 stopEvent();
             }
             // a gui component should stop propagation of action keys
@@ -649,17 +671,17 @@
             }
 
             if (self.isVisible()) {
-
+                console.log('Handling key for ', e.target, self.el);
                 switch(e.keyCode){
                     case 9: /* TAB */
-                        if (self.hasKey && self._o.trigger) {
+                        if (self.hasKey && self._o.trigger && self._o.bound) {
                             self._o.trigger.focus();
                             self.hasKey = false;
                         }
                         break;
                     case 32: /* SPACE */
                     case 13: /* ENTER */
-                        if (self.hasKey && !opts.container) {
+                        if (self.hasKey && opts.bound) {
                             stopEvent();
                             if (self._o.trigger) {
                                 self._o.trigger.focus();
@@ -668,10 +690,12 @@
                             self.emitEvent('select', [self.getDate()]);
                             log('Hiding because enter or space pressed');
                             self.hide();
+                        } else {
+                            self.emitEvent('select', [self.getDate()]);
                         }
                         break;
                     case 27: /* ESCAPE */
-                        if (!opts.container) {
+                        if (opts.bound) {
                             stopEvent();
                             log('Cancel because escape pressed');
                             self.cancel();
@@ -858,7 +882,7 @@
                 addEvent(opts.trigger, 'click', self._onInputClick);
                 addEvent(document, 'touchstart', self._onTouch);
                 addEvent(opts.trigger, 'focus', self._onInputFocus);
-                // addEvent(opts.trigger, 'blur', self._onInputBlur);
+                addEvent(opts.trigger, 'blur', self._onInputBlur);
                 addEvent(opts.trigger, 'keydown', self._onKeyChange);
             } else {
                 log('Showing initially');
@@ -871,6 +895,30 @@
         if (opts.autoInit) {
             this.init();
         }
+    };
+
+
+    Pikaday.util = {
+        addClass: addClass,
+        addEvent: addEvent,
+        adjustCalendar: adjustCalendar,
+        areDatesEqual: areDatesEqual,
+        containsElement: containsElement,
+        defaults: defaults,
+        extend: extend,
+        fireEvent: fireEvent,
+        getDaysInMonth: getDaysInMonth,
+        hasClass: hasClass,
+        isArray: isArray,
+        isDate: isDate,
+        isLeapYear: isLeapYear,
+        isWeekend: isWeekend,
+        log: log,
+        removeClass: removeClass,
+        removeEvent: removeEvent,
+        setToStartOfDay: setToStartOfDay,
+        toISODateString: toISODateString,
+        trim: trim,
     };
 
     Pikaday.EvEmitter = EvEmitter;
@@ -1326,6 +1374,9 @@
 
             var autofocus = this.el.querySelector('td.is-selected > .pika-button');
             if (!autofocus) {
+                autofocus = this.el.querySelector('td.is-startrange > .pika-button');
+            }
+            if (!autofocus) {
                 autofocus = this.el.querySelector('td.is-today > .pika-button');
             }
             if (!autofocus) {
@@ -1339,11 +1390,11 @@
             this.emitEvent('draw');
         },
 
-        focusPicker: function() {
+        focusPicker: function(forceFocus) {
             var self = this;
             var opts = this._o;
 
-            if (!this.hasKey && !this.focusInside) {
+            if (!this.focusInside && !forceFocus) {
                 return;
             }
 
@@ -1451,8 +1502,11 @@
                 showDaysInNextAndPreviousMonths: opts.showDaysInNextAndPreviousMonths
             };
 
-            dayConfig.text = opts.textFn ? opts.textFn.call(this, dayConfig) : dayNumber;
-            dayConfig.label = opts.labelFn ? opts.labelFn.call(this, dayConfig) : day.toDateString();
+            dayConfig.text = dayNumber;
+            dayConfig.label = opts.labelFn.call(this, dayConfig);
+            if (opts.dayFn) {
+                dayConfig = opts.dayFn.call(this, dayConfig) || dayConfig;
+            }
 
             return dayConfig;
         },
@@ -1549,14 +1603,12 @@
             }
 
             document.body.appendChild(this.speakEl);
-            if (opts.field) {
-                if (opts.container) {
-                    opts.container.appendChild(this.el);
-                } else if (opts.bound) {
-                    document.body.appendChild(this.el);
-                } else {
-                    opts.field.parentNode.insertBefore(this.el, opts.field.nextSibling);
-                }
+            if (opts.container) {
+                opts.container.appendChild(this.el);
+            } else if (opts.bound) {
+                document.body.appendChild(this.el);
+            } else if (opts.field) {
+                opts.field.parentNode.insertBefore(this.el, opts.field.nextSibling);
             }
 
             if (!this.isVisible()) {

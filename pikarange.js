@@ -1,5 +1,5 @@
 /*!
- * Pikarange 1.0.3
+ * Pikarange 1.0.5
  *
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
@@ -32,56 +32,17 @@
      * feature detection and helper functions
      */
 
-
-    var hasEventListeners = !!window.addEventListener,
-
+    var util = Pikaday.util,
     document = window.document,
-
-    sto = window.setTimeout,
-
-    addEvent = function(el, e, callback, capture)
-    {
-        if (hasEventListeners) {
-            el.addEventListener(e, callback, !!capture);
-        } else {
-            el.attachEvent('on' + e, callback);
-        }
-    },
-
-    removeEvent = function(el, e, callback, capture)
-    {
-        if (hasEventListeners) {
-            el.removeEventListener(e, callback, !!capture);
-        } else {
-            el.detachEvent('on' + e, callback);
-        }
-    },
-
-    trim = function(str)
-    {
-        return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g,'');
-    },
-
-    hasClass = function(el, cn)
-    {
-        return (' ' + el.className + ' ').indexOf(' ' + cn + ' ') !== -1;
-    },
-
-    addClass = function(el, cn)
-    {
-        if (!hasClass(el, cn)) {
-            el.className = (el.className === '') ? cn : el.className + ' ' + cn;
-        }
-    },
-
-    removeClass = function(el, cn)
-    {
-        el.className = trim((' ' + el.className + ' ').replace(' ' + cn + ' ', ' '));
-    },
-
-    addToDate = function(date, diff) {
-        return new Date(date.getTime() + diff);
-    },
+    addEvent = util.addEvent,
+    removeEvent = util.removeEvent,
+    trim = util.trim,
+    hasClass = util.hasClass,
+    addClass = util.addClass,
+    removeClass = util.removeClass,
+    addToDate = util.addToDate,
+    isDate = util.isDate,
+    containsElement = util.containsElement,
 
     extendCallback = function(src, dst, name) {
         var origMethod = src[name];
@@ -120,6 +81,8 @@
     },
 
 
+
+
     /**
      * Pikarange constructor
      */
@@ -140,6 +103,11 @@
         pickerOptions = extend({}, options, endOptions, {autoInit: false});
         var endPicker = new Pikaday(pickerOptions);
 
+        startPicker.isStart = true;
+        startPicker.end = endPicker;
+        endPicker.isEnd = true;
+        endPicker.start = startPicker;
+
         function setStartRange(d, temporary) {
             startPicker.setStartRange(d);
             endPicker.setStartRange(d);
@@ -154,14 +122,14 @@
             var time;
             if (typeof endPicker._o.minRange !== 'undefined') {
                 time = d.getTime() + daysToTime(endPicker._o.minRange);
-                if (!minEndDate || minEndDate < time) {
+                if (!isDate(minEndDate) || minEndDate < time) {
                     minEndDate = new Date(time);
                 }
             }
             var maxEndDate = options.maxDate;
             if (typeof endPicker._o.maxRange !== 'undefined') {
                 time = d.getTime() + daysToTime(endPicker._o.maxRange);
-                if (!maxEndDate || maxEndDate > time) {
+                if (!isDate(maxEndDate) || maxEndDate > time) {
                     maxEndDate = new Date(time);
                 }
             }
@@ -193,12 +161,38 @@
             }
         });
         startPicker.on('select', function() {
-            (endPicker._o.trigger || endPicker._o.field).focus();
+            if (endPicker._o.bound) {
+                (endPicker._o.trigger || endPicker._o.field).focus();
+            } else {
+                endPicker.focusPicker(true);
+            }
         });
         endPicker.on('change', function() {
             delete this.originalRange;
             setEndRange(this._d);
         });
+        endPicker.on('select', function() {
+            if (!startPicker._o.bound) {
+                startPicker.focusPicker(true);
+            }
+        });
+
+        function handleFocus(event) {
+            var a, b;
+            if (containsElement(startPicker.el, event.target)) {
+                a = startPicker;
+                b = endPicker;
+            } else
+            if (containsElement(endPicker.el, event.target)) {
+                a = endPicker;
+                b = startPicker;
+            }
+            if (a) {
+                addClass(a.el, 'is-focused');
+                removeClass(b.el, 'is-focused');
+            }
+        }
+        addEvent(document, 'focusin', handleFocus);
 
         startPicker.on('close', function() { delete this.originalRange; });
         endPicker.on('close', function() { delete this.originalRange; });
@@ -207,6 +201,7 @@
             removeEvent(startPicker.el, 'mouseover', handleStartOver);
             removeEvent(endPicker.el, 'mouseover', handleEndOver);
             endPicker.destroy();
+            removeEvent(document, 'focusin', handleFocus);
         });
 
         endPicker.on('init', function() {
@@ -218,7 +213,9 @@
             setEndRange(endPicker._d);
             addEvent(startPicker.el, 'mouseover', handleStartOver);
             addEvent(endPicker.el, 'mouseover', handleEndOver);
-
+            addClass(startPicker.el, 'is-focused');
+            addClass(startPicker.el, 'is-start');
+            addClass(endPicker.el, 'is-end');
         });
 
         var handleStartOver = getPickerOver(startPicker);
@@ -226,7 +223,7 @@
 
         function getPickerOver(picker) {
             return function handlePickerOver(event) {
-                if (startPicker._d && endPicker._d) {
+                if (startPicker._d && endPicker._d && picker === startPicker) {
                     return; // only show "live range" when no range is set
                 }
                 if (!hasClass(event.target, 'pika-button')) {
