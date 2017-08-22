@@ -1,5 +1,5 @@
 /*!
- * Pikarange 1.0.5
+ * Pikarange 1.0.6
  *
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
@@ -99,9 +99,11 @@
 
         pickerOptions = extend({}, options, startOptions, {autoInit: false});
         var startPicker = new Pikaday(pickerOptions);
+        var activePicker = startPicker;
 
         pickerOptions = extend({}, options, endOptions, {autoInit: false});
         var endPicker = new Pikaday(pickerOptions);
+
 
         startPicker.isStart = true;
         startPicker.end = endPicker;
@@ -135,14 +137,11 @@
             }
             endPicker.setMinDate(minEndDate);
             endPicker.setMaxDate(maxEndDate);
-            if (!endPicker._d || !endPicker._d.getTime()) {
-                endPicker.gotoDate(d); // better would be limitDate(minEndDate, d, maxEndDate)
-            } else {
-                if (endPicker._d < minEndDate || endPicker._d > maxEndDate) {
-                    endPicker.setDate(null);
-                    endPicker.gotoDate(d);
-                }
+            if (endPicker._d && (endPicker._d < minEndDate || endPicker._d > maxEndDate)) {
+                endPicker.setDate(null);
+                endPicker.gotoDate(d);
             }
+            syncCalendar(startPicker, endPicker, endPicker._d || startPicker._d);
         }
 
         function setEndRange(d) {
@@ -155,9 +154,9 @@
         startPicker.on('change', function() {
             delete this.originalRange;
             setStartRange(this._d);
-            if (!endPicker.isValid()) {
+            if (!options.preventSync || !endPicker.isValid()) {
                 endPicker.setDate(null);
-                endPicker.gotoDate(this._d);
+                syncCalendar(startPicker, endPicker, startPicker._d);
             }
         });
         startPicker.on('select', function() {
@@ -177,6 +176,17 @@
             }
         });
 
+        function syncCalendar(source, target, targetDate) {
+            target.calendars = [{
+                month: source.calendars[0].month,
+                year: source.calendars[0].year
+            }];
+            target.adjustCalendars();
+            if (targetDate) {
+                target.gotoDate(targetDate);
+            }
+        }
+
         function handleFocus(event) {
             var a, b;
             if (containsElement(startPicker.el, event.target)) {
@@ -187,7 +197,9 @@
                 a = endPicker;
                 b = startPicker;
             }
-            if (a) {
+            if (a && a !== activePicker) {
+                activePicker = a;
+                syncCalendar(b, a, a._d);
                 addClass(a.el, 'is-focused');
                 removeClass(b.el, 'is-focused');
             }
