@@ -9,32 +9,114 @@
     <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
-    <h1>Pikaday</h1>
+    <h1>Pikaday Plus</h1>
 
-    <p class="large">A refreshing JavaScript Datepicker — lightweight, no dependencies, modular CSS.</p>
+    <p class="large">A refreshed JavaScript Datepicker and Rangepicker — accessible, lightweight, no dependencies, modular CSS.</p>
 
-    <p><a href="https://github.com/dbushell/Pikaday"><strong>Pikaday source on GitHub</strong></a></p>
+    <p><a href="https://github.com/hinderlingvolkart/PikadayPlus"><strong>PikadayPlus source on GitHub</strong></a></p>
 
-    <label for="datepicker">Date:</label>
-    <br>
-    <input type="text" id="datepicker">
+    <fieldset>
+      <legend>Pick a date</legend>
+
+      <label for="datepicker">Date:</label>
+      <br>
+      <input type="text" id="datepicker">
+    </fieldset>
+
+
+    <fieldset>
+      <legend>Pick a range</legend>
+
+      <div class="flow-element">
+      <label for="rangestart">Start:</label>
+      <br>
+      <input type="text" id="rangestart">
+      </div>
+
+      <div class="flow-element">
+      <label for="rangeend">End:</label>
+      <br>
+      <input type="text" id="rangeend">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Single Range</legend>
+
+      <div class="flow-element" id="singlerange">
+        <div class="flow-element">
+        <label for="rangestart">Start:</label>
+        <br>
+        <input type="text" id="rangestart2">
+        </div>
+
+        <div class="flow-element">
+        <label for="rangeend">End:</label>
+        <br>
+        <input type="text" id="rangeend2">
+        </div>
+      </div>
+    </fieldset>
+
+
+
 
     <h2>What is this?</h2>
 
-    <p>Since version 1.0 Pikaday is a stable and battle tested date-picker. Feel free to use it however you like but please report any bugs or feature requests to the <a href="https://github.com/dbushell/Pikaday/issues">GitHub issue tracker</a>, thanks!</p>
+    <p>Since version 1.0 Pikaday is a stable and battle tested date-picker. Feel free to use it however you like but please report any bugs or feature requests to the <a href="https://github.com/hinderlingvolkart/PikadayPlus/issues">GitHub issue tracker</a>, thanks!</p>
 
-    <p>See <a href="examples">Examples</a></p>
+    <h2>Examples</h2>
+    <ul>
+      <li><a href="examples/amd.html">Amd</a></li>
+      <li><a href="examples/bound-container.html">Bound Container</a></li>
+      <li><a href="examples/calendars.html">Calendars</a></li>
+      <li><a href="examples/container.html">Container</a></li>
+      <li><a href="examples/date-range.html">Date Range</a></li>
+      <li><a href="examples/daysInNextMonth.html">Days in next month</a></li>
+      <li><a href="examples/diableDayFn.html">Diable-day-fn</a></li>
+      <li><a href="examples/moment.html">Moment</a></li>
+      <li><a href="examples/positions.html">Positions</a></li>
+      <li><a href="examples/theme.html">Theme</a></li>
+      <li><a href="examples/trigger-range.html">Trigger Range</a></li>
+      <li><a href="examples/trigger.html">Trigger</a></li>
+      <li><a href="examples/two-picker-range-container.html">Two Picker Range Container</a></li>
+      <li><a href="examples/weeknumbers.html">Weeknumbers</a></li>
+    </ul>
 
     <p class="small">Copyright © 2014 <a href="http://dbushell.com/">David Bushell</a> | BSD &amp; MIT license</p>
+    <p class="small">Copyright © 2017 <a href="http://hinderlingvolkart.com/">Hinderling Volkart AG</a> | BSD &amp; MIT license</p>
 
 
     <script src="pikaday.js"></script>
+    <script src="pikarange.js"></script>
     <script>
 
     var picker = new Pikaday(
     {
         field: document.getElementById('datepicker'),
         firstDay: 1,
+        minDate: new Date(),
+        maxDate: new Date(2020, 12, 31),
+        yearRange: [2000,2020]
+    });
+
+    var rangepicker = new Pikarange(
+    {
+        start: document.getElementById('rangestart'),
+        end: document.getElementById('rangeend'),
+        firstDay: 1,
+        minDate: new Date(),
+        maxDate: new Date(2020, 12, 31),
+        yearRange: [2000,2020]
+    });
+
+    var rangepicker2 = new Pikarange(
+    {
+        start: document.getElementById('rangestart2'),
+        end: document.getElementById('rangeend2'),
+        container: document.getElementById('singlerange'),
+        firstDay: 1,
+        position: 'bottom center',
         minDate: new Date(),
         maxDate: new Date(2020, 12, 31),
         yearRange: [2000,2020]
