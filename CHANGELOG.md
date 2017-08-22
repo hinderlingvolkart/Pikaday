@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Changelog
 
 ## 1.4.0 - 2015-10-30
