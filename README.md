@@ -11,7 +11,9 @@ Pikaday
 * No dependencies (but plays well with [Moment.js][moment])
 * Modular CSS classes for easy styling
 
-[**Try Pikaday Demo →**][Pikaday]
+Pikaday Plus is based on [Pikaday][Pikaday]
+
+[**Try Pikaday Demo →**][PikadayPlus]
 
 ![Pikaday Screenshot][screenshot]
 
@@ -276,9 +278,6 @@ You must provide 12 months and 7 weekdays (with abbreviations). Always specify w
 
 ### Timepicker
 
-Pikaday is a pure datepicker. It will not support picking a time of day. However, there have been efforts to add time support to Pikaday.
-See [#1][issue1] and [#18][issue18]. These reside in their own fork.
-
 You can use the work [@owenmead][owenmead] did most recently at [owenmead/Pikaday][owen Pika]
 A more simple time selection approach done by [@xeeali][xeeali] at [xeeali/Pikaday][xeeali Pika] is based on version 1.2.0.
 Also [@stas][stas] has a fork [stas/Pikaday][stas Pika], but is now quite old
@@ -302,36 +301,42 @@ Also [@stas][stas] has a fork [stas/Pikaday][stas Pika], but is now quite old
 
 * David Bushell [http://dbushell.com][Bushell] [@dbushell][Bushell Twitter]
 * Ramiro Rikkert [GitHub][Rikkert] [@RamRik][Rikkert Twitter]
+* Severin Klaus [GitHub][Klaus] [@betabong][Klaus Twitter] for [Hinderling Volkart][hv] [@hvzh][hv Twitter]
 
 Thanks to [@shoogledesigns][shoogledesigns] for the name.
 
 Copyright © 2014 David Bushell | BSD & MIT license
 
+  [PikadayPlus]:     http://hinderlingvolkart.github.com/PikadayPlus/                              "Pikaday Plus"
   [Pikaday]:     http://dbushell.github.com/Pikaday/                              "Pikaday"
   [moment]:      http://momentjs.com/                                             "moment.js"
   [browserify]:  http://browserify.org/                                           "browserify"
-  [screenshot]:  https://raw.github.com/dbushell/Pikaday/gh-pages/screenshot.png  "Screenshot"
-  [issues]:      https://github.com/dbushell/Pikaday/issues                       "Issue tracker"
+  [screenshot]:  https://raw.github.com/hinderlingvolkart/PikadayPlus/gh-pages/screenshot.png  "Screenshot"
+  [issues]:      https://github.com/hinderlingvolkart/PikadayPlus/issues                       "Issue tracker"
   [gem]:         https://rubygems.org/gems/pikaday-gem                            "RoR gem"
   [mdn_date]:    https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Date  "Date"
   [Bushell]:     http://dbushell.com/                                             "dbushell.com"
   [Bushell Twitter]: https://twitter.com/dbushell                                 "@dbushell"
   [Rikkert]:     https://github.com/rikkert                                       "Rikkert GitHub"
   [Rikkert Twitter]: https://twitter.com/ramrik                                   "@ramrik"
+  [Klaus]:     https://github.com/betabong                                       "Klaus GitHub"
+  [Klaus Twitter]: https://twitter.com/betabong                                   "@betabong"
+  [hv]:     https://www.hinderlingvolkart.com                                       "Hinderling Volkart"
+  [hv Twitter]: https://twitter.com/hvzh                                   "@hvzh"
   [shoogledesigns]:  https://twitter.com/shoogledesigns/status/255209384261586944 "@shoogledesigns"
-  [issue1]:      https://github.com/dbushell/Pikaday/issues/1                     "Issue 1"
-  [issue18]:     https://github.com/dbushell/Pikaday/issues/18                    "Issue 18"
+  [issue1]:      https://github.com/hinderlingvolkart/PikadayPlus/issues/1                     "Issue 1"
+  [issue18]:     https://github.com/hinderlingvolkart/PikadayPlus/issues/18                    "Issue 18"
   [stas]:        https://github.com/stas                                          "@stas"
   [stas Pika]:   https://github.com/stas/Pikaday                                  "Pikaday"
   [owenmead]:    https://github.com/owenmead                                      "@owenmead"
   [owen Pika]:   https://github.com/owenmead/Pikaday                              "Pikaday"
   [xeeali]:      https://github.com/xeeali                                        "@xeeali"
   [xeeali Pika]: https://github.com/xeeali/Pikaday                                "Pikaday"
-  [moment.js example]: http://dbushell.github.com/Pikaday/examples/moment.html    "Pikaday w/ moment.js"
-  [jQuery example]: http://dbushell.github.com/Pikaday/examples/jquery.html       "Pikaday w/ jQuery"
-  [AMD example]: http://dbushell.github.com/Pikaday/examples/amd.html             "Pikaday w/ AMD"
-  [jQuery AMD example]: http://dbushell.github.com/Pikaday/examples/jquery-amd.html "Pikaday w/ jQuery + AMD"
-  [trigger example]: http://dbushell.github.com/Pikaday/examples/trigger.html     "Pikaday using custom trigger"
-  [positions example]: http://dbushell.github.com/Pikaday/examples/positions.html "Pikaday using different position options"
-  [container example]: http://dbushell.github.com/Pikaday/examples/container.html "Pikaday using custom calendar container"
-  [theme example]: http://dbushell.github.com/Pikaday/examples/theme.html         "Pikaday using multiple themes"
+  [moment.js example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/moment.html    "Pikaday w/ moment.js"
+  [jQuery example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/jquery.html       "Pikaday w/ jQuery"
+  [AMD example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/amd.html             "Pikaday w/ AMD"
+  [jQuery AMD example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/jquery-amd.html "Pikaday w/ jQuery + AMD"
+  [trigger example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/trigger.html     "Pikaday using custom trigger"
+  [positions example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/positions.html "Pikaday using different position options"
+  [container example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/container.html "Pikaday using custom calendar container"
+  [theme example]: http://hinderlingvolkart.github.com/PikadayPlus/examples/theme.html         "Pikaday using multiple themes"
