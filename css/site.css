@@ -1,8 +1,9 @@
 html { margin: 0; padding: 0; }
-body { font-size: 100%; margin: 0; padding: 1.75em; font-family: 'Helvetica Neue', Arial, sans-serif; }
+body { font-size: 100%; line-height: 1.5; margin: 0 auto; padding: 1.75em; font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 56em; }
 
-h1 { font-size: 1.75em; margin: 0 0 0.6em 0; }
-h2 { font-size: 1.25em; margin: 0 0 0.6em 0; }
+h1 { font-size: calc(2em + 3vw); line-height: 1; margin: 0 0 0.6em 0; }
+h2 { font-size: calc(1.25em + 1vw); margin: 1.2em 0 0.3em 0; }
+h3, fieldset>legend { font-size:  calc(1em + .5vw); font-weight: bold; }
 
 a { color: #2996cc; }
 a:hover { text-decoration: none; }
@@ -21,13 +22,17 @@ input[type="text"] {
     padding: 0.5em;
 }
 
+fieldset {
+    margin-bottom: 2em;
+}
+
 button#datepicker-button {
     margin-bottom: 3em;
 }
 
 .flow-element {
     display: inline-block;
-    margin-right: 3em;
+    margin-right: 1em;
     vertical-align: top;
 }
 .flow-element:last-child {
