@@ -1,41 +1,132 @@
 /*!
- * Pikaday
+ * PikadayPlus 1.0.6
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
+ * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
+/* eslint-disable */
 
 (function (root, factory)
 {
     'use strict';
 
-    var moment;
     if (typeof exports === 'object') {
         // CommonJS module
-        // Load moment.js as an optional dependency
-        try { moment = require('moment'); } catch (e) {}
-        module.exports = factory(moment);
+        module.exports = factory();
     } else if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
-        define(function (req)
-        {
-            // Load moment.js as an optional dependency
-            var id = 'moment';
-            try { moment = req(id); } catch (e) {}
-            return factory(moment);
-        });
+        define(factory);
     } else {
-        root.Pikaday = factory(root.moment);
+        root.Pikaday = factory();
     }
-}(this, function (moment)
+}(this, function ()
 {
     'use strict';
+
+    var EvEmitter = (function() {
+
+        function EvEmitter() {}
+
+        var proto = EvEmitter.prototype;
+
+        proto.on = function( eventName, listener ) {
+            if ( !eventName || !listener ) {
+                return;
+            }
+            // set events hash
+            var events = this._events = this._events || {};
+            // set listeners array
+            var listeners = events[ eventName ] = events[ eventName ] || [];
+            // only add once
+            if ( listeners.indexOf( listener ) == -1 ) {
+                listeners.push( listener );
+            }
+
+            return this;
+        };
+
+        proto.once = function( eventName, listener ) {
+            if ( !eventName || !listener ) {
+                return;
+            }
+            // add event
+            this.on( eventName, listener );
+            // set once flag
+            // set onceEvents hash
+            var onceEvents = this._onceEvents = this._onceEvents || {};
+            // set onceListeners object
+            var onceListeners = onceEvents[ eventName ] = onceEvents[ eventName ] || {};
+            // set flag
+            onceListeners[ listener ] = true;
+
+            return this;
+        };
+
+        proto.off = function( eventName, listener ) {
+            if (typeof eventName === 'undefined') {
+                delete this._events;
+                delete this._onceEvents;
+                return;
+            }
+            var listeners = this._events && this._events[ eventName ];
+            if ( !listeners || !listeners.length ) {
+                return;
+            }
+            var index = listeners.indexOf( listener );
+            if ( index != -1 ) {
+                listeners.splice( index, 1 );
+            }
+
+            return this;
+        };
+
+        proto.emitEvent = function( eventName, args ) {
+            log('emit', eventName, args);
+            var listeners = this._events && this._events[ eventName ];
+            if ( !listeners || !listeners.length ) {
+                return;
+            }
+            var i = 0;
+            var listener = listeners[i];
+            args = args || [];
+            // once stuff
+            var onceListeners = this._onceEvents && this._onceEvents[ eventName ];
+
+            while ( listener ) {
+                var isOnce = onceListeners && onceListeners[ listener ];
+                if ( isOnce ) {
+                    // remove listener
+                    // remove before trigger to prevent recursion
+                    this.off( eventName, listener );
+                    // unset once flag
+                    delete onceListeners[ listener ];
+                }
+                // trigger listener
+                listener.apply( this, args );
+                // get next listener
+                i += isOnce ? 0 : 1;
+                listener = listeners[i];
+            }
+
+            return this;
+        };
+
+        return EvEmitter;
+    })();
+
+
+
+
 
     /**
      * feature detection and helper functions
      */
-    var hasMoment = typeof moment === 'function',
 
-    hasEventListeners = !!window.addEventListener,
+    var log = function() {
+        console.log.apply(console, arguments);
+    }
+
+    var hasEventListeners = !!window.addEventListener,
 
     document = window.document,
 
@@ -129,10 +220,21 @@
         if (isDate(date)) date.setHours(0,0,0,0);
     },
 
-    compareDates = function(a,b)
+    areDatesEqual = function(a,b)
     {
+        if (a == b) {
+            return true;
+        }
+        if (!a || !b) {
+            return false;
+        }
         // weak date comparison (use setToStartOfDay(date) to ensure correct result)
         return a.getTime() === b.getTime();
+    },
+
+    toISODateString = function(date) {
+        var y = date.getFullYear(), m = String(date.getMonth() + 1), d = String(date.getDate());
+        return y + '-' + (m.length == 1 ? '0' : '') + m + '-' + (d.length == 1 ? '0' : '') + d;
     },
 
     extend = function(to, from, overwrite)
@@ -172,26 +274,56 @@
         return calendar;
     },
 
+
+    containsElement = function(container, element) {
+        while (element) {
+            if (container === element) {
+                return true;
+            }
+            element = element.parentNode;
+        }
+        return false;
+    },
+
+
+
     /**
      * defaults and localisation
      */
     defaults = {
 
+        // initialise right away, if false, you have to call new Pikaday(options).init();
+        autoInit: true,
+
         // bind the picker to a form field
         field: null,
+
+         // default `field` if `field` is set
+        trigger: null,
 
         // automatically show/hide the picker on `field` focus (default `true` if `field` is set)
         bound: undefined,
 
+
+
         // position of the datepicker, relative to the field (default to bottom & left)
         // ('bottom' & 'left' keywords are not used, 'top' & 'right' are modifier on the bottom/left position)
+        positionTarget: null,
         position: 'bottom left',
 
         // automatically fit in the viewport even if it means repositioning from the position option
         reposition: true,
 
         // the default output format for `.toString()` and `field` value
-        format: 'YYYY-MM-DD',
+        // a function(date) { return string }
+        // could be date.toLocaleDateString(this._o.i18n.language, {year: 'numeric', month: 'short', day: 'numeric', weekday: 'short'})
+        formatFn: function(date) {
+            return toISODateString(date);
+        },
+
+        parseFn: function(value) {
+            return new Date(Date.parse(value));
+        },
 
         // the initial date to view when first opened
         defaultDate: null,
@@ -201,6 +333,43 @@
 
         // first day of week (0: Sunday, 1: Monday etc)
         firstDay: 0,
+
+        disableDayFn: null,
+
+        labelFn: function(day) {
+            if (!this.dateFormatter) {
+                try {
+                    this.dateFormatter = window.Intl.DateTimeFormat(this._o.i18n.language, {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    });
+                }
+                catch (e) {
+                    this.dateFormatter = {
+                        format: function(date) {
+                            return date.toDateString();
+                        }
+                    }
+                }
+            }
+            var dateStr = this.dateFormatter.format(day.date);
+            var dayStr = this._o.i18n.weekdays[day.date.getDay()];
+            var text = dayStr + ', ' + dateStr;
+            if (day.isToday) {
+                text += ' (' + this._o.i18n.today + ')';
+            }
+            if (day.isDisabled) {
+                text = '(' + this._o.i18n.disabled + ') ' + text;
+            }
+            return text;
+        },
+
+        dayFn: function(day) {
+            return day;
+        },
+
+        renderFn: function(day) {
+            return {}; // text, label, style
+        },
 
         // the minimum/earliest date that can be selected
         minDate: null,
@@ -230,6 +399,9 @@
         // Render the month after year in the calendar title
         showMonthAfterYear: false,
 
+        // Render days of the calendar grid that fall in the next or previous month
+        showDaysInNextAndPreviousMonths: false,
+
         // how many months are visible
         numberOfMonths: 1,
 
@@ -242,6 +414,11 @@
 
         // internationalization
         i18n: {
+            language: document.querySelector('html').getAttribute('lang') || undefined,
+            today: 'Today',
+            disabled: 'Disabled',
+            help: 'Use arrow keys to choose a date.',
+
             previousMonth : 'Previous Month',
             nextMonth     : 'Next Month',
             months        : ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -274,10 +451,17 @@
 
     renderDay = function(opts)
     {
-        if (opts.isEmpty) {
-            return '<td class="is-empty"></td>';
-        }
         var arr = [];
+        var ariaSelected = 'false';
+        var ariaLabel = opts.label || '';
+        var tabindex = opts.tabindex;
+        if (opts.isEmpty) {
+            if (opts.showDaysInNextAndPreviousMonths) {
+                arr.push('is-outside-current-month');
+            } else {
+                return '<td class="is-empty"></td>';
+            }
+        }
         if (opts.isDisabled) {
             arr.push('is-disabled');
         }
@@ -286,6 +470,7 @@
         }
         if (opts.isSelected) {
             arr.push('is-selected');
+            ariaSelected = 'true';
         }
         if (opts.isInRange) {
             arr.push('is-inrange');
@@ -296,10 +481,13 @@
         if (opts.isEndRange) {
             arr.push('is-endrange');
         }
+        if (opts.classes) {
+            arr.push(opts.classes);
+        }
         return '<td data-day="' + opts.day + '" class="' + arr.join(' ') + '">' +
                  '<button class="pika-button pika-day" type="button" ' +
-                    'data-pika-year="' + opts.year + '" data-pika-month="' + opts.month + '" data-pika-day="' + opts.day + '">' +
-                        opts.day +
+                    'data-pika-year="' + opts.year + '" data-pika-month="' + opts.month + '" data-pika-day="' + opts.day + '" aria-selected="' + ariaSelected + '" aria-label="' + ariaLabel + '" tabindex="' + tabindex + '">' +
+                        opts.text +
                  '</button>' +
                '</td>';
     },
@@ -330,16 +518,16 @@
         for (i = 0; i < 7; i++) {
             arr.push('<th scope="col"><abbr title="' + renderDayName(opts, i) + '">' + renderDayName(opts, i, true) + '</abbr></th>');
         }
-        return '<thead>' + (opts.isRTL ? arr.reverse() : arr).join('') + '</thead>';
+        return '<thead aria-hidden="true"><tr>' + (opts.isRTL ? arr.reverse() : arr).join('') + '</tr></thead>';
     },
 
-    renderTitle = function(instance, c, year, month, refYear)
+    renderTitle = function(instance, c, year, month, refYear, randId)
     {
         var i, j, arr,
             opts = instance._o,
             isMinYear = year === opts.minYear,
             isMaxYear = year === opts.maxYear,
-            html = '<div class="pika-title">',
+            html = '<div class="pika-title" aria-hidden="true">',
             monthHtml,
             yearHtml,
             prev = true,
@@ -347,10 +535,11 @@
 
         for (arr = [], i = 0; i < 12; i++) {
             arr.push('<option value="' + (year === refYear ? i - c : 12 + i - c) + '"' +
-                (i === month ? ' selected': '') +
-                ((isMinYear && i < opts.minMonth) || (isMaxYear && i > opts.maxMonth) ? 'disabled' : '') + '>' +
+                (i === month ? ' selected="selected"': '') +
+                ((isMinYear && i < opts.minMonth) || (isMaxYear && i > opts.maxMonth) ? 'disabled="disabled"' : '') + '>' +
                 opts.i18n.months[i] + '</option>');
         }
+
         monthHtml = '<div class="pika-label">' + opts.i18n.months[month] + '<select class="pika-select pika-select-month" tabindex="-1">' + arr.join('') + '</select></div>';
 
         if (isArray(opts.yearRange)) {
@@ -363,7 +552,7 @@
 
         for (arr = []; i < j && i <= opts.maxYear; i++) {
             if (i >= opts.minYear) {
-                arr.push('<option value="' + i + '"' + (i === year ? ' selected': '') + '>' + (i) + '</option>');
+                arr.push('<option value="' + i + '"' + (i === year ? ' selected="selected"': '') + '>' + (i) + '</option>');
             }
         }
         yearHtml = '<div class="pika-label">' + year + opts.yearSuffix + '<select class="pika-select pika-select-year" tabindex="-1">' + arr.join('') + '</select></div>';
@@ -383,18 +572,18 @@
         }
 
         if (c === 0) {
-            html += '<button class="pika-prev' + (prev ? '' : ' is-disabled') + '" type="button">' + opts.i18n.previousMonth + '</button>';
+            html += '<button class="pika-prev' + (prev ? '' : ' is-disabled') + '" ' + (prev ? '' : 'disabled ') + 'type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.previousMonth + '</button>';
         }
         if (c === (instance._o.numberOfMonths - 1) ) {
-            html += '<button class="pika-next' + (next ? '' : ' is-disabled') + '" type="button">' + opts.i18n.nextMonth + '</button>';
+            html += '<button class="pika-next' + (next ? '' : ' is-disabled') + '" ' + (next ? '' : 'disabled ') + 'type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.nextMonth + '</button>';
         }
 
         return html += '</div>';
     },
 
-    renderTable = function(opts, data)
+    renderTable = function(opts, data, randId)
     {
-        return '<table cellpadding="0" cellspacing="0" class="pika-table">' + renderHead(opts) + renderBody(data) + '</table>';
+        return '<table cellpadding="0" cellspacing="0" class="pika-table" role="presentation">' + renderHead(opts) + renderBody(data) + '</table>';
     },
 
 
@@ -406,7 +595,8 @@
         var self = this,
             opts = self.config(options);
 
-        self._onMouseDown = function(e)
+
+        self._onClick = function(e)
         {
             if (!self._v) {
                 return;
@@ -417,19 +607,17 @@
                 return;
             }
 
+            e.stopPropagation();
+
             if (!hasClass(target, 'is-disabled')) {
-                if (hasClass(target, 'pika-button') && !hasClass(target, 'is-empty')) {
-                    self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
+                if (hasClass(target, 'pika-button') && !hasClass(target, 'is-empty') && !hasClass(target.parentNode, 'is-disabled')) {
                     if (opts.bound) {
-                        sto(function() {
-                            self.hide();
-                            if (opts.field) {
-                                opts.field.blur();
-                            }
-                        }, 100);
+                        this._v && console.log("Hiding soon because date has been selected and picker is bound.");
+                        self.hideAfter(200);
                     }
-                }
-                else if (hasClass(target, 'pika-prev')) {
+                    self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
+                } else
+                if (hasClass(target, 'pika-prev')) {
                     self.prevMonth();
                 }
                 else if (hasClass(target, 'pika-next')) {
@@ -464,6 +652,91 @@
             }
         };
 
+        self._onKeyChange = function(e)
+        {
+            e = e || window.event;
+
+            // once user start key navigation, we'll handle some things differently
+            // (like setting the focus into the picker)
+            function captureKey() {
+                self.hasKey = true;
+                self.focusInside = true;
+                stopEvent();
+            }
+            // a gui component should stop propagation of action keys
+            // (compare to select)
+            function stopEvent() {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            if (self.isVisible()) {
+                console.log('Handling key for ', e.target, self.el);
+                switch(e.keyCode){
+                    case 9: /* TAB */
+                        if (self.hasKey && self._o.trigger && self._o.bound) {
+                            self._o.trigger.focus();
+                            self.hasKey = false;
+                        }
+                        break;
+                    case 32: /* SPACE */
+                    case 13: /* ENTER */
+                        if (self.hasKey && opts.bound) {
+                            stopEvent();
+                            if (self._o.trigger) {
+                                self._o.trigger.focus();
+                                try { self._o.trigger.select(); } catch (e) {} // trigger could be a button
+                            }
+                            self.emitEvent('select', [self.getDate()]);
+                            log('Hiding because enter or space pressed');
+                            self.hide();
+                        } else {
+                            self.emitEvent('select', [self.getDate()]);
+                        }
+                        break;
+                    case 27: /* ESCAPE */
+                        if (opts.bound) {
+                            stopEvent();
+                            log('Cancel because escape pressed');
+                            self.cancel();
+                        }
+                        break;
+                    case 37: /* LEFT */
+                        captureKey();
+                        self.adjustDate(-1);
+                        break;
+                    case 38: /* UP */
+                        captureKey();
+                        self.adjustDate(-7);
+                        break;
+                    case 39: /* RIGHT */
+                        captureKey();
+                       self.adjustDate(+1);
+                        break;
+                    case 40: /* DOWN */
+                        captureKey();
+                        self.adjustDate(+7);
+                        break;
+                    case 33: /* PAGE_UP */
+                        captureKey();
+                        self.adjustMonth(-1);
+                        break;
+                    case 34: /* PAGE_DOWN */
+                        captureKey();
+                        self.adjustMonth(+1);
+                        break;
+                    case 35: /* END */
+                        captureKey();
+                        self.adjustYear(+1);
+                        break;
+                    case 36: /* HOME */
+                        captureKey();
+                        self.adjustYear(-1);
+                        break;
+                }
+            }
+        };
+
         self._onInputChange = function(e)
         {
             var date;
@@ -471,56 +744,69 @@
             if (e.firedBy === self) {
                 return;
             }
-            if (hasMoment) {
-                date = moment(opts.field.value, opts.format);
-                date = (date && date.isValid()) ? date.toDate() : null;
-            }
-            else {
-                date = new Date(Date.parse(opts.field.value));
-            }
+            date = opts.parseFn.call(self, opts.field.value);
             if (isDate(date)) {
               self.setDate(date);
-            }
-            if (!self._v) {
-                self.show();
+            } else {
+              self.setDate(null);
             }
         };
 
-        self._onInputFocus = function()
+        self._onTouch = function(event)
         {
+            if (!self.isVisible() || (event.target !== opts.field)) {
+                self.touched = true;
+            }
+        };
+
+        self._onInputFocus = function(event)
+        {
+            if (self.touched && opts.field && opts.field.nodeName === 'INPUT') {
+                opts.field.blur();
+                self.touched = false;
+                self.focusInside = true;
+            }
+            log("Showing because input was focused", event.target);
             self.show();
         };
 
-        self._onInputClick = function()
+        self._onInputClick = function(event)
         {
+            self.touched = false;
+            log("Showing because input was clicked", event.target);
             self.show();
         };
 
-        self._onInputBlur = function()
+        self._onInputBlur = function(event)
         {
+            if (self.hasKey) {
+                return;
+            }
             // IE allows pika div to gain focus; catch blur the input field
             var pEl = document.activeElement;
             do {
-                if (hasClass(pEl, 'pika-single')) {
+                if (hasClass(pEl, 'pika-single') || pEl == self.el) {
                     return;
                 }
             }
             while ((pEl = pEl.parentNode));
 
             if (!self._c) {
-                self._b = sto(function() {
-                    self.hide();
-                }, 50);
+                this._v && log("Hiding soon because input was blured", event.target, self._b);
+                self.hide(true);
             }
             self._c = false;
         };
 
-        self._onClick = function(e)
+        self._onDocumentClick = function(e)
         {
             e = e || window.event;
             var target = e.target || e.srcElement,
                 pEl = target;
             if (!target) {
+                return;
+            }
+            if (containsElement(self.el, target)) {
                 return;
             }
             if (!hasEventListeners && hasClass(target, 'pika-select')) {
@@ -536,64 +822,115 @@
             }
             while ((pEl = pEl.parentNode));
             if (self._v && target !== opts.trigger && pEl !== opts.trigger) {
-                self.hide();
+                log('Hiding because of document click');
+                self.hide(true);
             }
         };
 
-        self.el = document.createElement('div');
-        self.el.className = 'pika-single' + (opts.isRTL ? ' is-rtl' : '') + (opts.theme ? ' ' + opts.theme : '');
+        self.init = function() {
+            this._v = false; // visibility
 
-        addEvent(self.el, 'mousedown', self._onMouseDown, true);
-        addEvent(self.el, 'touchend', self._onMouseDown, true);
-        addEvent(self.el, 'change', self._onChange);
+            self.el = document.createElement('div');
+            self.el.className = 'pika-single' + (opts.isRTL ? ' is-rtl' : '') + (opts.theme ? ' ' + opts.theme : '');
+            self.el.setAttribute('role', 'application');
+            self.el.setAttribute('aria-label', self.getLabel());
 
-        if (opts.field) {
-            if (opts.container) {
-                opts.container.appendChild(self.el);
-            } else if (opts.bound) {
-                document.body.appendChild(self.el);
-            } else {
-                opts.field.parentNode.insertBefore(self.el, opts.field.nextSibling);
-            }
-            addEvent(opts.field, 'change', self._onInputChange);
+            self.speakEl = document.createElement('div');
+            self.speakEl.setAttribute('role', 'status');
+            self.speakEl.setAttribute('aria-live', 'assertive');
+            self.speakEl.setAttribute('aria-atomic', 'true');
+            self.speakEl.setAttribute('style', 'position: absolute; left: -9999px; opacity: 0;');
 
-            if (!opts.defaultDate) {
-                if (hasMoment && opts.field.value) {
-                    opts.defaultDate = moment(opts.field.value, opts.format).toDate();
-                } else {
-                    opts.defaultDate = new Date(Date.parse(opts.field.value));
+            addEvent(self.el, 'mousedown', self._onClick, true);
+            addEvent(self.el, 'touchend', self._onClick, true);
+            addEvent(self.el, 'change', self._onChange);
+            addEvent(self.el, 'keydown', self._onKeyChange);
+
+
+            if (opts.field) {
+                addEvent(opts.field, 'change', self._onInputChange);
+
+                if (!opts.defaultDate) {
+                    opts.defaultDate = opts.parseFn.call(self, opts.field.value);
+                    opts.setDefaultDate = true;
                 }
-                opts.setDefaultDate = true;
             }
-        }
 
-        var defDate = opts.defaultDate;
+            var defDate = opts.defaultDate;
 
-        if (isDate(defDate)) {
-            if (opts.setDefaultDate) {
-                self.setDate(defDate, true);
+            if (isDate(defDate)) {
+                if (opts.setDefaultDate) {
+                    self.setDate(defDate, true);
+                } else {
+                    self.gotoDate(defDate);
+                }
             } else {
+                defDate = new Date();
+                if (opts.minDate && opts.minDate > defDate) {
+                    defDate = opts.minDate;
+                } else
+                if (opts.maxDate && opts.maxDate < defDate) {
+                    defDate = opts.maxDate;
+                }
                 self.gotoDate(defDate);
             }
-        } else {
-            self.gotoDate(new Date());
-        }
 
-        if (opts.bound) {
-            this.hide();
-            self.el.className += ' is-bound';
-            addEvent(opts.trigger, 'click', self._onInputClick);
-            addEvent(opts.trigger, 'focus', self._onInputFocus);
-            addEvent(opts.trigger, 'blur', self._onInputBlur);
-        } else {
-            this.show();
+            if (opts.bound) {
+                log('Hiding initially');
+                this.hide();
+                self.el.className += ' is-bound';
+                addEvent(opts.trigger, 'click', self._onInputClick);
+                addEvent(document, 'touchstart', self._onTouch);
+                addEvent(opts.trigger, 'focus', self._onInputFocus);
+                addEvent(opts.trigger, 'blur', self._onInputBlur);
+                addEvent(opts.trigger, 'keydown', self._onKeyChange);
+            } else {
+                log('Showing initially');
+                this.show();
+            }
+
+            this.emitEvent('init');
+        };
+
+        if (opts.autoInit) {
+            this.init();
         }
     };
 
 
+    Pikaday.util = {
+        addClass: addClass,
+        addEvent: addEvent,
+        adjustCalendar: adjustCalendar,
+        areDatesEqual: areDatesEqual,
+        containsElement: containsElement,
+        defaults: defaults,
+        extend: extend,
+        fireEvent: fireEvent,
+        getDaysInMonth: getDaysInMonth,
+        hasClass: hasClass,
+        isArray: isArray,
+        isDate: isDate,
+        isLeapYear: isLeapYear,
+        isWeekend: isWeekend,
+        log: log,
+        removeClass: removeClass,
+        removeEvent: removeEvent,
+        setToStartOfDay: setToStartOfDay,
+        toISODateString: toISODateString,
+        trim: trim,
+    };
+
+    Pikaday.EvEmitter = EvEmitter;
+
+
+    var now = new Date();
+    setToStartOfDay(now);
+
     /**
      * public Pikaday API
      */
+
     Pikaday.prototype = {
 
 
@@ -622,9 +959,13 @@
 
             opts.disableDayFn = (typeof opts.disableDayFn) === 'function' ? opts.disableDayFn : null;
 
+            opts.labelFn = (typeof opts.labelFn) === 'function' ? opts.labelFn : null;
+
             var nom = parseInt(opts.numberOfMonths, 10) || 1;
             opts.numberOfMonths = nom > 4 ? 4 : nom;
 
+            opts.minDate = opts.parseFn.call(self, opts.minDate);
+            opts.maxDate = opts.parseFn.call(self, opts.maxDate);
             if (!isDate(opts.minDate)) {
                 opts.minDate = false;
             }
@@ -652,42 +993,60 @@
                 }
             }
 
+            // listen to "event" when key is onEvent
+            var eventTest = /^on([A-Z]\w+)$/;
+            Object.keys(opts).forEach(function(key) {
+                var match = key.match(eventTest);
+                if (match) {
+                    var type = match[1].toLowerCase();
+                    this.on(type, opts[key]);
+                    delete opts[key];
+                }
+            }.bind(this));
+
             return opts;
         },
 
         /**
-         * return a formatted string of the current selection (using Moment.js if available)
+         * return a formatted string of the current selection
          */
-        toString: function(format)
+        toString: function()
         {
-            return !isDate(this._d) ? '' : hasMoment ? moment(this._d).format(format || this._o.format) : this._d.toDateString();
-        },
-
-        /**
-         * return a Moment.js object of the current selection (if available)
-         */
-        getMoment: function()
-        {
-            return hasMoment ? moment(this._d) : null;
-        },
-
-        /**
-         * set the current selection from a Moment.js object (if available)
-         */
-        setMoment: function(date, preventOnSelect)
-        {
-            if (hasMoment && moment.isMoment(date)) {
-                this.setDate(date.toDate(), preventOnSelect);
+            if (!isDate(this._d)) {
+                return '';
             }
+            if (typeof this._o.formatFn == 'function') {
+                return this._o.formatFn.call(this, this._d);
+            }
+            return this._d.toDateString();
+        },
+
+
+        /**
+         * return a Date object of the current selection with fallback for the current date
+         */
+        getDate: function()
+        {
+            return isDate(this._d) ? new Date(this._d.getTime()) : new Date();
         },
 
         /**
          * return a Date object of the current selection
          */
-        getDate: function()
+        getSelectedDate: function()
         {
             return isDate(this._d) ? new Date(this._d.getTime()) : null;
         },
+
+
+        /**
+         * return a Date object of the current selection
+         */
+        getVisibleDate: function()
+        {
+            return new Date(this.calendars[0].year, this.calendars[0].month, 1);
+        },
+
 
         /**
          * set the current selection
@@ -702,6 +1061,8 @@
                     fireEvent(this._o.field, 'change', { firedBy: this });
                 }
 
+                this.emitEvent('change', [this._d]);
+
                 return this.draw();
             }
             if (typeof date === 'string') {
@@ -710,6 +1071,8 @@
             if (!isDate(date)) {
                 return;
             }
+
+            setToStartOfDay(date);
 
             var min = this._o.minDate,
                 max = this._o.maxDate;
@@ -720,6 +1083,10 @@
                 date = max;
             }
 
+            if (areDatesEqual(this._d, date)) {
+                return;
+            }
+
             this._d = new Date(date.getTime());
             setToStartOfDay(this._d);
             this.gotoDate(this._d);
@@ -728,9 +1095,35 @@
                 this._o.field.value = this.toString();
                 fireEvent(this._o.field, 'change', { firedBy: this });
             }
-            if (!preventOnSelect && typeof this._o.onSelect === 'function') {
-                this._o.onSelect.call(this, this.getDate());
+            if (!preventOnSelect) {
+                this.emitEvent('select', [this.getDate()]);
             }
+            this.emitEvent('change', [this._d]);
+        },
+
+        selectDate: function(date, preventOnSelect) {
+            this.setDate(date, preventOnSelect);
+            if (this._d) {
+                this.speak(this.getDayConfig(this._d).label);
+            }
+        },
+
+        getLabel: function() {
+            var label = '', opts = this._o;
+            if (opts.field && opts.field.id) {
+                label = document.querySelector('label[for="' + opts.field.id + '"]');
+                label = label ? label.textContent || label.innerText : '';
+            }
+            if (!label && opts.trigger) {
+                label = opts.trigger.textContent || opts.trigger.innerText;
+            }
+            label += ' (' + opts.i18n.help + ')';
+            return label;
+        },
+
+        speak: function(html) {
+            this.speak.innerHTML = '';
+            this.speakEl.innerHTML = html;
         },
 
         /**
@@ -765,6 +1158,14 @@
             }
 
             this.adjustCalendars();
+        },
+
+        adjustDate: function(days) {
+            var day = this.getDate();
+            var difference = parseInt(days);
+            var newDay = new Date(day.valueOf());
+            newDay.setDate(newDay.getDate() + difference);
+            this.selectDate(newDay, true);
         },
 
         adjustCalendars: function() {
@@ -822,10 +1223,18 @@
          */
         setMinDate: function(value)
         {
-            setToStartOfDay(value);
-            this._o.minDate = value;
-            this._o.minYear  = value.getFullYear();
-            this._o.minMonth = value.getMonth();
+            var d = this._o.parseFn.call(self, value);
+            if (isDate(d)) { // d.getTime() === NaN if date is invalid
+                setToStartOfDay(d);
+                this._o.minDate = d;
+                this._o.minYear  = d.getFullYear();
+                this._o.minMonth = d.getMonth();
+            } else {
+                this._o.minDate = defaults.minDate;
+                this._o.minYear  = defaults.minYear;
+                this._o.minMonth = defaults.minMonth;
+            }
+
             this.draw();
         },
 
@@ -834,37 +1243,107 @@
          */
         setMaxDate: function(value)
         {
-            setToStartOfDay(value);
-            this._o.maxDate = value;
-            this._o.maxYear = value.getFullYear();
-            this._o.maxMonth = value.getMonth();
+            var d = this._o.parseFn.call(self, value);
+            if (isDate(d)) { // d.getTime() === NaN if date is invalid
+                setToStartOfDay(d);
+                this._o.maxDate = d;
+                this._o.maxYear = d.getFullYear();
+                this._o.maxMonth = d.getMonth();
+            } else {
+                this._o.maxDate = defaults.maxDate;
+                this._o.maxYear = defaults.maxYear;
+                this._o.maxMonth = defaults.maxMonth;
+            }
+
             this.draw();
         },
 
         setStartRange: function(value)
         {
-            this._o.startRange = value;
+            if (!areDatesEqual(this._o.startRange, value)) {
+                this._o.startRange = value;
+                this.draw();
+                this.emitEvent('startrange', [this._o.startRange]);
+            }
         },
 
         setEndRange: function(value)
         {
-            this._o.endRange = value;
+            if (!areDatesEqual(this._o.endRange, value)) {
+                this._o.endRange = value;
+                this.draw();
+                this.emitEvent('endrange', [this._o.endRange]);
+            }
         },
+
+        getStartRange: function(value)
+        {
+            return this._o.startRange;
+        },
+
+        getEndRange: function(value)
+        {
+            return this._o.endRange;
+        },
+
+
+        _request: function(action) {
+            var self = this;
+            if (window.requestAnimationFrame) {
+                if (!this.requested) {
+                    this.requested = {
+                        request: window.requestAnimationFrame(function() {
+                            if (self.requested.draw) {
+                                self._draw();
+                            }
+                            if (self.requested.adjustPosition) {
+                                self._adjustPosition();
+                            }
+                            self.focusPicker();
+                            self.requested = null;
+                        })
+                    };
+                }
+                this.requested[action] = true;
+            } else {
+                // execute immediately without animation frame support
+                this['_' + action]();
+            }
+        },
+
+        /**
+         * request refreshing HTML
+         * (uses requestAnimationFrame if available to improve performance)
+         */
+        draw: function(force) {
+            if (!this._v) {
+                return; // no need to draw when not visible
+            }
+            if (force) {
+                this._draw(force);
+            } else {
+                this._request('draw');
+            }
+        },
+
+
 
         /**
          * refresh the HTML
          */
-        draw: function(force)
+        _draw: function(force)
         {
             if (!this._v && !force) {
                 return;
             }
             var opts = this._o,
+                self = this,
                 minYear = opts.minYear,
                 maxYear = opts.maxYear,
                 minMonth = opts.minMonth,
                 maxMonth = opts.maxMonth,
-                html = '';
+                html = '',
+                randId;
 
             if (this._y <= minYear) {
                 this._y = minYear;
@@ -879,29 +1358,66 @@
                 }
             }
 
+            randId = 'pika-title-' + Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 2);
+
+            var label = this.getLabel();
+
+            if (this._o.field && this._o.trigger == this._o.field && opts.bound) {
+                this._o.field.setAttribute('aria-label', label);
+            }
+
             for (var c = 0; c < opts.numberOfMonths; c++) {
-                html += '<div class="pika-lendar">' + renderTitle(this, c, this.calendars[c].year, this.calendars[c].month, this.calendars[0].year) + this.render(this.calendars[c].year, this.calendars[c].month) + '</div>';
+                html += '<div class="pika-lendar">' + renderTitle(this, c, this.calendars[c].year, this.calendars[c].month, this.calendars[0].year, randId) + this.render(this.calendars[c].year, this.calendars[c].month, randId) + '</div>';
             }
 
             this.el.innerHTML = html;
 
+            var autofocus = this.el.querySelector('td.is-selected > .pika-button');
+            if (!autofocus) {
+                autofocus = this.el.querySelector('td.is-startrange > .pika-button');
+            }
+            if (!autofocus) {
+                autofocus = this.el.querySelector('td.is-today > .pika-button');
+            }
+            if (!autofocus) {
+                autofocus = this.el.querySelector('td:not(.is-disabled) > .pika-button');
+            }
+            if (!autofocus) {
+                autofocus = this.el.querySelector('.pika-button');
+            }
+            autofocus.setAttribute('tabindex', '0');
+
+            this.emitEvent('draw');
+        },
+
+        focusPicker: function(forceFocus) {
+            var self = this;
+            var opts = this._o;
+
+            if (!this.focusInside && !forceFocus) {
+                return;
+            }
+
+            self.el.querySelector('.pika-button[tabindex="0"]').focus();
+
             if (opts.bound) {
                 if(opts.field.type !== 'hidden') {
                     sto(function() {
-                        opts.trigger.focus();
+                        self.el.querySelector('.pika-button[tabindex="0"]').focus();
                     }, 1);
                 }
             }
 
-            if (typeof this._o.onDraw === 'function') {
-                var self = this;
-                sto(function() {
-                    self._o.onDraw.call(self);
-                }, 0);
-            }
+            this.focusInside = false;
         },
 
         adjustPosition: function()
+        {
+            this._request('adjustPosition');
+        },
+
+
+        _adjustPosition: function()
         {
             var field, pEl, width, height, viewportWidth, viewportHeight, scrollTop, left, top, clientRect;
 
@@ -909,7 +1425,7 @@
 
             this.el.style.position = 'absolute';
 
-            field = this._o.trigger;
+            field = this._o.positionTarget || this._o.trigger;
             pEl = field;
             width = this.el.offsetWidth;
             height = this.el.offsetHeight;
@@ -930,39 +1446,83 @@
                 }
             }
 
-            // default position is bottom & left
-            if ((this._o.reposition && left + width > viewportWidth) ||
-                (
-                    this._o.position.indexOf('right') > -1 &&
-                    left - width + field.offsetWidth > 0
-                )
-            ) {
-                left = left - width + field.offsetWidth;
+            var halign = 0;
+            if (this._o.position.indexOf('right') > -1) {
+                halign = 1;
+            } else
+            if (this._o.position.indexOf('center') > -1) {
+                halign = 0.5;
             }
-            if ((this._o.reposition && top + height > viewportHeight + scrollTop) ||
-                (
-                    this._o.position.indexOf('top') > -1 &&
-                    top - height - field.offsetHeight > 0
-                )
-            ) {
-                top = top - height - field.offsetHeight;
+
+            left -= (width - field.offsetWidth) * halign;
+
+            // default position is bottom & left
+            if (this._o.reposition) {
+                var overflow = {
+                    right: Math.max(0, (left + width) - (viewportWidth - 20)),
+                    left: Math.max(0, 20 - left),
+                    top: Math.max(0, -top)
+                };
+                left += overflow.left - overflow.right;
+                top += overflow.top;
             }
 
             this.el.style.left = left + 'px';
             this.el.style.top = top + 'px';
         },
 
+        getDayConfig: function(day) {
+            var opts   = this._o,
+                isSelected = isDate(this._d) ? areDatesEqual(day, this._d) : false,
+                isToday = areDatesEqual(day, now),
+                dayNumber = day.getDate(),
+                monthNumber = day.getMonth(),
+                yearNumber = day.getFullYear(),
+                isStartRange = opts.startRange && areDatesEqual(opts.startRange, day),
+                isEndRange = opts.endRange && areDatesEqual(opts.endRange, day),
+                isInRange = opts.startRange && opts.endRange && opts.startRange < day && day < opts.endRange,
+                isDisabled = (opts.minDate && day < opts.minDate) ||
+                             (opts.maxDate && day > opts.maxDate) ||
+                             (opts.disableWeekends && isWeekend(day)) ||
+                             (opts.disableDayFn && opts.disableDayFn.call(this, day));
+
+
+
+            var dayConfig = {
+                date: day,
+                day: dayNumber,
+                month: monthNumber,
+                year: yearNumber,
+                isSelected: isSelected,
+                isToday: isToday,
+                isDisabled: isDisabled,
+                isStartRange: isStartRange,
+                isEndRange: isEndRange,
+                isInRange: isInRange,
+                showDaysInNextAndPreviousMonths: opts.showDaysInNextAndPreviousMonths
+            };
+
+            dayConfig.text = dayNumber;
+            dayConfig.label = opts.labelFn.call(this, dayConfig);
+            if (opts.dayFn) {
+                dayConfig = opts.dayFn.call(this, dayConfig) || dayConfig;
+            }
+
+            return dayConfig;
+        },
+
         /**
          * render HTML for a particular month
          */
-        render: function(year, month)
+        render: function(year, month, randId)
         {
             var opts   = this._o,
-                now    = new Date(),
                 days   = getDaysInMonth(year, month),
                 before = new Date(year, month, 1).getDay(),
                 data   = [],
                 row    = [];
+
+            now = new Date();
             setToStartOfDay(now);
             if (opts.firstDay > 0) {
                 before -= opts.firstDay;
@@ -970,37 +1530,36 @@
                     before += 7;
                 }
             }
+            var previousMonth = month === 0 ? 11 : month - 1,
+                nextMonth = month === 11 ? 0 : month + 1,
+                yearOfPreviousMonth = month === 0 ? year - 1 : year,
+                yearOfNextMonth = month === 11 ? year + 1 : year,
+                daysInPreviousMonth = getDaysInMonth(yearOfPreviousMonth, previousMonth);
             var cells = days + before,
                 after = cells;
+
+            var selectedInMonth = -1;
+
             while(after > 7) {
                 after -= 7;
             }
             cells += 7 - after;
+            if (this._d && new Date(year, month, 1) <= this._d && new Date(year, month+1, 1) > this._d) {
+                selectedInMonth = this._d;
+            } else
+            if (new Date(year, month, 1) <= now && new Date(year, month+1, 1) > now) {
+                selectedInMonth = now;
+            } else {
+                selectedInMonth = new Date(year, month, 1);
+            }
+
             for (var i = 0, r = 0; i < cells; i++)
             {
                 var day = new Date(year, month, 1 + (i - before)),
-                    isSelected = isDate(this._d) ? compareDates(day, this._d) : false,
-                    isToday = compareDates(day, now),
-                    isEmpty = i < before || i >= (days + before),
-                    isStartRange = opts.startRange && compareDates(opts.startRange, day),
-                    isEndRange = opts.endRange && compareDates(opts.endRange, day),
-                    isInRange = opts.startRange && opts.endRange && opts.startRange < day && day < opts.endRange,
-                    isDisabled = (opts.minDate && day < opts.minDate) ||
-                                 (opts.maxDate && day > opts.maxDate) ||
-                                 (opts.disableWeekends && isWeekend(day)) ||
-                                 (opts.disableDayFn && opts.disableDayFn(day)),
-                    dayConfig = {
-                        day: 1 + (i - before),
-                        month: month,
-                        year: year,
-                        isSelected: isSelected,
-                        isToday: isToday,
-                        isDisabled: isDisabled,
-                        isEmpty: isEmpty,
-                        isStartRange: isStartRange,
-                        isEndRange: isEndRange,
-                        isInRange: isInRange
-                    };
+                    dayConfig = this.getDayConfig(day);
+
+                dayConfig.isEmpty = i < before || i >= (days + before);
+                dayConfig.tabindex = '-1';
 
                 row.push(renderDay(dayConfig));
 
@@ -1013,7 +1572,20 @@
                     r = 0;
                 }
             }
-            return renderTable(opts, data);
+            return renderTable(opts, data, randId);
+        },
+
+        isValid: function() {
+            if (!isDate(this._d)) {
+                return 0;
+            }
+            if (isDate(this._o.minDate) && (this._d < this._o.minDate)) {
+                return false;
+            }
+            if (isDate(this._o.maxDate) && (this._d > this._o.maxDate)) {
+                return false;
+            }
+            return true;
         },
 
         isVisible: function()
@@ -1023,34 +1595,87 @@
 
         show: function()
         {
-            if (!this._v) {
+            var opts = this._o;
+            clearTimeout(this.hideTimeout);
+
+            if (this._d) {
+                this.gotoDate(this._d);
+            }
+
+            document.body.appendChild(this.speakEl);
+            if (opts.container) {
+                opts.container.appendChild(this.el);
+            } else if (opts.bound) {
+                document.body.appendChild(this.el);
+            } else if (opts.field) {
+                opts.field.parentNode.insertBefore(this.el, opts.field.nextSibling);
+            }
+
+            if (!this.isVisible()) {
+                log('Showing', performance.now());
                 removeClass(this.el, 'is-hidden');
                 this._v = true;
                 this.draw();
                 if (this._o.bound) {
-                    addEvent(document, 'click', this._onClick);
+                    addEvent(document, 'click', this._onDocumentClick);
                     this.adjustPosition();
                 }
-                if (typeof this._o.onOpen === 'function') {
-                    this._o.onOpen.call(this);
+                if (this._o.field) {
+                    addClass(this._o.field, 'is-visible-pikaday');
+                    this.recentValue = this._o.field.value;
+                }
+                this.emitEvent('open');
+                if (this._o.field && this._o.field != this._o.trigger) {
+                    this.speak(this.getLabel());
                 }
             }
         },
 
-        hide: function()
+        cancel: function() {
+            var field = this._o.field;
+            if (field) {
+                field.value = this.recentValue;
+            }
+            try {
+                field.select();
+            } catch (e) {}
+            log('Hiding because cancelled');
+            this.hide(true);
+        },
+
+        hideAfter: function(delay, cancelled) {
+            var self = this;
+            clearTimeout(this.hideTimeout);
+            if (this._v !== false) {
+                log("Will hide after " + delay + "ms.");
+                this.hideTimeout = sto(function() {
+                    self.hide(cancelled);
+                }, delay);
+            }
+        },
+
+        hide: function(cancelled)
         {
             var v = this._v;
             if (v !== false) {
+                log('Hiding', performance.now());
+               clearTimeout(this.hideTimeout);
+                this.hasKey = false;
                 if (this._o.bound) {
-                    removeEvent(document, 'click', this._onClick);
+                    removeEvent(document, 'click', this._onDocumentClick);
                 }
-                this.el.style.position = 'static'; // reset
-                this.el.style.left = 'auto';
-                this.el.style.top = 'auto';
-                addClass(this.el, 'is-hidden');
+                if (this._o.field) {
+                    removeClass(this._o.field, 'is-visible-pikaday');
+                }
+                if (this._o.bound) {
+                    if (this.el.parentNode) {
+                        this.el.parentNode.removeChild(this.el);
+                    }
+                }
                 this._v = false;
-                if (v !== undefined && typeof this._o.onClose === 'function') {
-                    this._o.onClose.call(this);
+                this.emitEvent('close');
+                if (this.speakEl.parentNode) {
+                    document.body.removeChild(this.speakEl);
                 }
             }
         },
@@ -1061,23 +1686,32 @@
         destroy: function()
         {
             this.hide();
-            removeEvent(this.el, 'mousedown', this._onMouseDown, true);
-            removeEvent(this.el, 'touchend', this._onMouseDown, true);
+
+            removeEvent(this.el, 'mousedown', this._onClick, true);
+            removeEvent(this.el, 'touchend', this._onClick, true);
             removeEvent(this.el, 'change', this._onChange);
+            removeEvent(this.el, 'keydown', this._onKeyChange);
             if (this._o.field) {
                 removeEvent(this._o.field, 'change', this._onInputChange);
                 if (this._o.bound) {
                     removeEvent(this._o.trigger, 'click', this._onInputClick);
+                    removeEvent(document, 'touchstart', this._onTouch);
                     removeEvent(this._o.trigger, 'focus', this._onInputFocus);
                     removeEvent(this._o.trigger, 'blur', this._onInputBlur);
+                    removeEvent(this._o.trigger, 'keydown', this._onKeyChange);
                 }
             }
-            if (this.el.parentNode) {
-                this.el.parentNode.removeChild(this.el);
-            }
+
+            this.emitEvent('destroy');
+            this.off();
         }
 
     };
+
+    for (var name in EvEmitter.prototype) {
+        Pikaday.prototype[name] = EvEmitter.prototype[name];
+    }
+
 
     return Pikaday;
 

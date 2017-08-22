@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+    <title>Pikaday - Range with two pickers</title>
+    <meta name="author" content="Stuart McFarlane">
+    <link rel="stylesheet" href="../css/pikaday.css">
+    <link rel="stylesheet" href="../css/site.css">
+    <style>
+        .price {
+            display: block;
+            font-size: 80%;
+            pointer-events: none;
+        }
+        .pika-button {
+            text-align: center;
+            height: 42px;
+        }
+        .pika-lendar {
+            width: 320px;
+        }
+        .is-startrange .pika-button,
+        .is-endrange .pika-button {
+            background: #D5E9F7;
+            color: black;
+        }
+        .pika-start .is-startrange .pika-button,
+        .pika-end .is-endrange .pika-button {
+            background: #33aaff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <a href="https://github.com/dbushell/Pikaday"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+
+    <h1>Pikaday - Range with two pickers</h1>
+
+    <p class="large">Check out Pikarange for a single range picker. This one is for trickier range picking, like when only a handful of dates are available to pick from.</p>
+
+    <div>
+        <div class="flow-element">
+            <label for="datepicker1">Date:</label>
+            <input type="text" id="datepicker1">
+            <div id="container1" class="pika-start"></div>
+        </div>
+        <div class="flow-element">
+            <label for="datepicker2">Date:</label>
+            <input type="text" id="datepicker2">
+            <div id="container2" class="pika-end"></div>
+        </div>
+    </div>
+
+    <h2>What is this?</h2>
+
+    <p>Since version 1.0 Pikaday is a stable and battle tested date-picker. Feel free to use it however you like but please report any bugs or feature requests to the <a href="https://github.com/dbushell/Pikaday/issues">GitHub issue tracker</a>, thanks!</p>
+
+    <p class="small">Copyright © 2014 <a href="http://dbushell.com/">David Bushell</a> | BSD &amp; MIT license | Example by <a href="https://github.com/rikkert">Ramiro Rikkert</a></p>
+
+
+    <!-- First load pikaday.js and then the jQuery plugin -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment-with-locales.min.js"></script>
+    <script src="../pikaday.js"></script>
+    <script>
+
+    function extend(a, b) {
+        for (var i in b) {
+            a[i] = b[i];
+        }
+        return a;
+    }
+
+    var options = {
+        firstDay: 1,
+        textFn: function(day) {
+            return day.isDisabled ? day.day : day.day + '<span class="price">$' + (day.day * 3) + '</span>';
+        },
+        labelFn: function(day) {
+            return day.date.toDateString() + (day.isDisabled ? ' - not available.' : ' - from USD ' + (day.day * 3));
+        },
+        minDate: new Date(2000, 0, 1),
+        maxDate: new Date(2020, 12, 31),
+        yearRange: [2000, 2020],
+        bound: false,
+    };
+
+    var enabled1 = [5, 12, 18, 19, 20, 28];
+
+    var picker1 = new Pikaday(
+        extend({
+            field: document.getElementById('datepicker1'),
+            disableDayFn: function(date) {
+                return enabled1.indexOf(date.getDate()) < 0;
+            },
+            container: document.getElementById('container1'),
+            onSelect: function(date) {
+                if (!picker2._d || picker2._d < date) {
+                    picker2.setMinDate(date);
+                    picker2.setDate(null);
+                    picker2.gotoDate(date);
+                }
+                validateRange();
+            }
+        }, options)
+    );
+
+    var enabled2 = [9, 10, 18, 21, 27, 31];
+
+    var picker2 = new Pikaday(
+        extend({
+            field: document.getElementById('datepicker2'),
+            disableDayFn: function(date) {
+                return enabled2.indexOf(date.getDate()) < 0;
+            },
+            container: document.getElementById('container2'),
+            onSelect: function(date) {
+                validateRange();
+            }
+        }, options)
+    );
+
+    function validateRange() {
+        var startDate = picker1._d;
+        var endDate = picker2._d;
+        if (endDate && startDate) {
+            picker1.setStartRange(startDate);
+            picker1.setEndRange(endDate);
+            picker2.setStartRange(startDate);
+            picker2.setEndRange(endDate);
+        } else {
+            picker1.setStartRange(null);
+            picker1.setEndRange(null);
+            picker2.setStartRange(null);
+            picker2.setEndRange(null);
+        }
+    }
+
+    </script>
+</body>
+</html>

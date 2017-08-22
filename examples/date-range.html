@@ -3,28 +3,60 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
-    <title>Pikaday - Date Range example</title>
+    <title>Pikarange - Date Range example</title>
     <meta name="author" content="David Bushell">
     <link rel="stylesheet" href="../css/pikaday.css">
     <link rel="stylesheet" href="../css/site.css">
+    <style>
+        .examples {text-align: center;}
+        .pikarange > * {display: inline-block;}
+        .pikarange label {display: block;}
+    </style>
 </head>
 <body>
-    <h1>Pikaday - Date Range example</h1>
+    <h1>Pikarange - Date Range example</h1>
 
     <p class="large">A refreshing JavaScript Datepicker — lightweight, no dependencies, modular CSS.</p>
 
     <p><a href="https://github.com/dbushell/Pikaday"><strong>Pikaday source on GitHub</strong></a></p>
 
-    <div style="display: inline-block">
-        <label for="start">Start:</label>
-        <br>
-        <input type="text" id="start">
-    </div>
+    <div class="examples">
 
-    <div style="display: inline-block">
-        <label for="end">End:</label>
-        <br>
-        <input type="text" id="end">
+        <h2>Default</h2>
+        <div class="pikarange">
+            <div><label>Start</label><input type="text" class="pikarange-start"></div>
+            <div><label>End</label><input type="text" class="pikarange-end"></div>
+        </div>
+
+        <h2>"minRange": 0</h2>
+        <div class="pikarange" data-options='{"minRange": 0}'>
+            <div><label>Start</label><input type="text" class="pikarange-start"></div>
+            <div><label>End</label><input type="text" class="pikarange-end"></div>
+        </div>
+
+        <h2>"maxRange": 14</h2>
+        <div class="pikarange" data-options='{"maxRange": 14}'>
+            <div><label>Start</label><input type="text" class="pikarange-start" value="2014-03-01"></div>
+            <div><label>End</label><input type="text" class="pikarange-end"></div>
+        </div>
+
+        <h2>"minRange": 1, "maxRange": 60, "disableWeekends": true</h2>
+        <div class="pikarange" data-options='{"minRange": 1, "maxRange": 60, "disableWeekends": true}'>
+            <div><label>Start</label><input type="text" class="pikarange-start" value="2024-03-01"></div>
+            <div><label>End</label><input type="text" class="pikarange-end" value="2024-03-15"></div>
+        </div>
+
+        <h2>"minDate": "2024-02-01", "maxDate": "2024-07-30", "minRange": 14, "maxRange": 28</h2>
+        <div class="pikarange" data-options='{"minDate": "2024-02-01", "maxDate": "2024-07-30", "minRange": 14, "maxRange": 28}'>
+            <div><label>Start</label><input type="text" class="pikarange-start" value=""></div>
+            <div><label>End</label><input type="text" class="pikarange-end" value="2024-07-01"></div>
+        </div>
+
+        <h2>"minDate": "2018-05-01", "maxDate": "2018-06-30", "minRange": 14, "maxRange": 28</h2>
+        <div class="pikarange" data-options='{"minDate": "2018-05-01", "maxDate": "2018-06-30", "minRange": 14, "maxRange": 28}'>
+            <div><label>Start</label><input type="text" class="pikarange-start" value="2014-03-01"><button type="button" class="pikarange-start">📅</button></div>
+            <div><label>End</label><input type="text" class="pikarange-end"><button type="button" class="pikarange-end">📅</button></div>
+        </div>
     </div>
 
     <h2>What is this?</h2>
@@ -33,51 +65,38 @@
 
     <p class="small">Copyright &copy; 2014 <a href="http://dbushell.com/">David Bushell</a> | BSD &amp; MIT license</p>
 
-
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment-with-locales.min.js"></script>
     <script src="../pikaday.js"></script>
+    <script src="../pikarange.js"></script>
     <script>
-    var startDate,
-        endDate,
-        updateStartDate = function() {
-            startPicker.setStartRange(startDate);
-            endPicker.setStartRange(startDate);
-            endPicker.setMinDate(startDate);
-        },
-        updateEndDate = function() {
-            startPicker.setEndRange(endDate);
-            startPicker.setMaxDate(endDate);
-            endPicker.setEndRange(endDate);
-        },
-        startPicker = new Pikaday({
-            field: document.getElementById('start'),
-            minDate: new Date(),
-            maxDate: new Date(2020, 12, 31),
-            onSelect: function() {
-                startDate = this.getDate();
-                updateStartDate();
+        document.querySelectorAll('.pikarange').forEach(function(el) {
+            var options = {
+                numberOfMonths: 2,
+                start: {
+                    field: el.querySelector('input.pikarange-start'),
+                    trigger: el.querySelector('button.pikarange-start')
+                },
+                end: {
+                    field: el.querySelector('input.pikarange-end'),
+                    trigger: el.querySelector('button.pikarange-end')
+                },
+                positionTarget: el,
+                position: 'bottom center'
+            };
+            var optionAttr = el.getAttribute('data-options');
+            if (optionAttr) {
+                optionAttr = JSON.parse(optionAttr);
+                for (var i in optionAttr) {
+                    if (typeof optionAttr[i] === 'string' && optionAttr[i].match(/^[\d\-]+/)) {
+                        options[i] = new Date(optionAttr[i]);
+                    } else {
+                        options[i] = optionAttr[i];
+                    }
+                }
             }
-        }),
-        endPicker = new Pikaday({
-            field: document.getElementById('end'),
-            minDate: new Date(),
-            maxDate: new Date(2020, 12, 31),
-            onSelect: function() {
-                endDate = this.getDate();
-                updateEndDate();
-            }
-        }),
-        _startDate = startPicker.getDate(),
-        _endDate = endPicker.getDate();
-
-        if (_startDate) {
-            startDate = _startDate;
-            updateStartDate();
-        }
-
-        if (_endDate) {
-            endDate = _endDate;
-            updateEndDate();
-        }
+            var range = new Pikarange(options);
+        });
     </script>
 </body>
 </html>

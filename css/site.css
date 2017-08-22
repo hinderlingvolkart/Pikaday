@@ -40,3 +40,7 @@ button#datepicker-button {
 #container {
     min-height: 15em;
 }
+
+*:focus {
+    outline: 2px solid red !important;
+}
