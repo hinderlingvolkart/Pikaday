@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.6
+ * PikadayPlus 1.0.7
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -81,7 +81,6 @@
         };
 
         proto.emitEvent = function( eventName, args ) {
-            log('emit', eventName, args);
             var listeners = this._events && this._events[ eventName ];
             if ( !listeners || !listeners.length ) {
                 return;
@@ -123,7 +122,7 @@
      */
 
     var log = function() {
-        console.log.apply(console, arguments);
+        // console.log.apply ? console.log.apply(console, arguments) : console.log(arguments);
     }
 
     var hasEventListeners = !!window.addEventListener,
@@ -131,6 +130,22 @@
     document = window.document,
 
     sto = window.setTimeout,
+
+    requestAnimationFrame = function(cb) {
+        if (window.requestAnimationFrame) {
+            return window.requestAnimationFrame(cb);
+        } else {
+            return setTimeout(cb, 1);
+        }
+    },
+
+    cancelAnimationFrame = function(id) {
+        if (window.requestAnimationFrame) {
+            return window.cancelAnimationFrame(id);
+        } else {
+            return clearTimeout(id);
+        }
+    },
 
     addEvent = function(el, e, callback, capture)
     {
@@ -671,7 +686,6 @@
             }
 
             if (self.isVisible()) {
-                console.log('Handling key for ', e.target, self.el);
                 switch(e.keyCode){
                     case 9: /* TAB */
                         if (self.hasKey && self._o.trigger && self._o.bound) {
@@ -804,6 +818,11 @@
             var target = e.target || e.srcElement,
                 pEl = target;
             if (!target) {
+                return;
+            }
+            var timeSinceShown = new Date() - self.timeShowed;
+            console.log('Document click - time since shown', timeSinceShown);
+            if (timeSinceShown < 200) {
                 return;
             }
             if (containsElement(self.el, target)) {
@@ -1292,7 +1311,7 @@
             if (window.requestAnimationFrame) {
                 if (!this.requested) {
                     this.requested = {
-                        request: window.requestAnimationFrame(function() {
+                        request: requestAnimationFrame(function() {
                             if (self.requested.draw) {
                                 self._draw();
                             }
@@ -1398,7 +1417,10 @@
                 return;
             }
 
-            self.el.querySelector('.pika-button[tabindex="0"]').focus();
+            try {
+                self.el.querySelector('.pika-button[tabindex="0"]').focus();
+            }
+            catch (e) {}
 
             if (opts.bound) {
                 if(opts.field.type !== 'hidden') {
@@ -1612,11 +1634,11 @@
             }
 
             if (!this.isVisible()) {
-                log('Showing', performance.now());
                 removeClass(this.el, 'is-hidden');
                 this._v = true;
                 this.draw();
                 if (this._o.bound) {
+                    this.timeShowed = new Date();
                     addEvent(document, 'click', this._onDocumentClick);
                     this.adjustPosition();
                 }
@@ -1658,8 +1680,10 @@
         {
             var v = this._v;
             if (v !== false) {
-                log('Hiding', performance.now());
-               clearTimeout(this.hideTimeout);
+                clearTimeout(this.hideTimeout);
+                if (this.requested) {
+                    cancelAnimationFrame(this.requested.request);
+                }
                 this.hasKey = false;
                 if (this._o.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
