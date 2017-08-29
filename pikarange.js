@@ -1,5 +1,5 @@
 /*!
- * Pikarange 1.0.7
+ * Pikarange 1.0.8
  *
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */

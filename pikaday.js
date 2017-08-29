@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.7
+ * PikadayPlus 1.0.8
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -499,12 +499,43 @@
         if (opts.classes) {
             arr.push(opts.classes);
         }
-        return '<td data-day="' + opts.day + '" class="' + arr.join(' ') + '">' +
-                 '<button class="pika-button pika-day" type="button" ' +
-                    'data-pika-year="' + opts.year + '" data-pika-month="' + opts.month + '" data-pika-day="' + opts.day + '" aria-selected="' + ariaSelected + '" aria-label="' + ariaLabel + '" tabindex="' + tabindex + '">' +
-                        opts.text +
-                 '</button>' +
-               '</td>';
+
+        var html = '', attr, key;
+
+        attr = {
+            "class": arr.join(' '),
+            "data-day": opts.day
+        };
+        for (key in opts.td) {
+            attr[key] = opts.td[key];
+        }
+
+        html += '<td';
+        for (key in attr) {
+            html += ' ' + key + '="' + attr[key] + '"';
+        }
+        html += '>';
+
+        attr = {
+            "class": 'pika-button pika-day',
+            "type": 'button',
+            "data-pika-year": opts.year,
+            "data-pika-month": opts.month,
+            "data-pika-day": opts.day,
+            "aria-selected": ariaSelected,
+            "aria-label": ariaLabel,
+            "tabindex": tabindex
+        };
+        for (key in opts.button) {
+            attr[key] = opts.button[key];
+        }
+        html += '<button';
+        for (key in attr) {
+            html += ' ' + key + '="' + attr[key] + '"';
+        }
+        html += '>' + opts.text + '</button>';
+        html += '</td>';
+        return html;
     },
 
     renderWeek = function (d, m, y) {
@@ -627,7 +658,7 @@
             if (!hasClass(target, 'is-disabled')) {
                 if (hasClass(target, 'pika-button') && !hasClass(target, 'is-empty') && !hasClass(target.parentNode, 'is-disabled')) {
                     if (opts.bound) {
-                        this._v && console.log("Hiding soon because date has been selected and picker is bound.");
+                        this._v && log("Hiding soon because date has been selected and picker is bound.");
                         self.hideAfter(200);
                     }
                     self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
@@ -821,7 +852,6 @@
                 return;
             }
             var timeSinceShown = new Date() - self.timeShowed;
-            console.log('Document click - time since shown', timeSinceShown);
             if (timeSinceShown < 200) {
                 return;
             }
@@ -1521,7 +1551,9 @@
                 isStartRange: isStartRange,
                 isEndRange: isEndRange,
                 isInRange: isInRange,
-                showDaysInNextAndPreviousMonths: opts.showDaysInNextAndPreviousMonths
+                showDaysInNextAndPreviousMonths: opts.showDaysInNextAndPreviousMonths,
+                td: {},
+                button: {}
             };
 
             dayConfig.text = dayNumber;
