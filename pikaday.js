@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.8
+ * PikadayPlus 1.0.9
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -827,20 +827,22 @@
             if (self.hasKey) {
                 return;
             }
-            // IE allows pika div to gain focus; catch blur the input field
-            var pEl = document.activeElement;
-            do {
-                if (hasClass(pEl, 'pika-single') || pEl == self.el) {
-                    return;
+            requestAnimationFrame(function() {
+                // IE allows pika div to gain focus; catch blur the input field
+                var pEl = document.activeElement;
+                do {
+                    if (hasClass(pEl, 'pika-single') || pEl == self.el) {
+                        return;
+                    }
                 }
-            }
-            while ((pEl = pEl.parentNode));
+                while ((pEl = pEl.parentNode));
 
-            if (!self._c) {
-                this._v && log("Hiding soon because input was blured", event.target, self._b);
-                self.hide(true);
-            }
-            self._c = false;
+                if (!self._c) {
+                    this._v && log("Hiding soon because input was blured", event.target, self._b);
+                    self.hide(true);
+                }
+                self._c = false;
+            });
         };
 
         self._onDocumentClick = function(e)
@@ -1338,26 +1340,21 @@
 
         _request: function(action) {
             var self = this;
-            if (window.requestAnimationFrame) {
-                if (!this.requested) {
-                    this.requested = {
-                        request: requestAnimationFrame(function() {
-                            if (self.requested.draw) {
-                                self._draw();
-                            }
-                            if (self.requested.adjustPosition) {
-                                self._adjustPosition();
-                            }
-                            self.focusPicker();
-                            self.requested = null;
-                        })
-                    };
-                }
-                this.requested[action] = true;
-            } else {
-                // execute immediately without animation frame support
-                this['_' + action]();
+            if (!this.requested) {
+                this.requested = {
+                    request: requestAnimationFrame(function() {
+                        if (self.requested.draw) {
+                            self._draw();
+                        }
+                        if (self.requested.adjustPosition) {
+                            self._adjustPosition();
+                        }
+                        self.focusPicker();
+                        self.requested = null;
+                    })
+                };
             }
+            this.requested[action] = true;
         },
 
         /**
