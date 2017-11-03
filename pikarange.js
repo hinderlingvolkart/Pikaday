@@ -1,5 +1,5 @@
 /*!
- * Pikarange 1.0.8
+ * Pikarange 1.0.10
  *
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
@@ -226,8 +226,8 @@
             addEvent(startPicker.el, 'mouseover', handleStartOver);
             addEvent(endPicker.el, 'mouseover', handleEndOver);
             addClass(startPicker.el, 'is-focused');
-            addClass(startPicker.el, 'is-start');
-            addClass(endPicker.el, 'is-end');
+            addClass(startPicker.el, 'is-start pika-range');
+            addClass(endPicker.el, 'is-end pika-range');
         });
 
         var handleStartOver = getPickerOver(startPicker);
@@ -235,7 +235,7 @@
 
         function getPickerOver(picker) {
             return function handlePickerOver(event) {
-                if (startPicker._d && endPicker._d && picker === startPicker) {
+                if (options.hideRangeWhenSelected && startPicker._d && endPicker._d) {
                     return; // only show "live range" when no range is set
                 }
                 if (!hasClass(event.target, 'pika-button')) {
