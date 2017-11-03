@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.9
+ * PikadayPlus 1.0.10
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -838,7 +838,7 @@
                 while ((pEl = pEl.parentNode));
 
                 if (!self._c) {
-                    this._v && log("Hiding soon because input was blured", event.target, self._b);
+                    self._v && log("Hiding soon because input was blured", event.target, self._b);
                     self.hide(true);
                 }
                 self._c = false;
