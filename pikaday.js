@@ -1,8 +1,8 @@
 /*!
- * PikadayPlus 1.0.8
+ * PikadayPlus 1.0.11
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
- * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
+ * Copyright © 2018 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
 /* eslint-disable */
 
@@ -331,7 +331,7 @@
 
         // the default output format for `.toString()` and `field` value
         // a function(date) { return string }
-        // could be date.toLocaleDateString(this._o.i18n.language, {year: 'numeric', month: 'short', day: 'numeric', weekday: 'short'})
+        // could be date.toLocaleDateString(this._options.i18n.language, {year: 'numeric', month: 'short', day: 'numeric', weekday: 'short'})
         formatFn: function(date) {
             return toISODateString(date);
         },
@@ -354,7 +354,7 @@
         labelFn: function(day) {
             if (!this.dateFormatter) {
                 try {
-                    this.dateFormatter = window.Intl.DateTimeFormat(this._o.i18n.language, {
+                    this.dateFormatter = window.Intl.DateTimeFormat(this._options.i18n.language, {
                         year: 'numeric', month: 'long', day: 'numeric'
                     });
                 }
@@ -367,13 +367,13 @@
                 }
             }
             var dateStr = this.dateFormatter.format(day.date);
-            var dayStr = this._o.i18n.weekdays[day.date.getDay()];
+            var dayStr = this._options.i18n.weekdays[day.date.getDay()];
             var text = dayStr + ', ' + dateStr;
             if (day.isToday) {
-                text += ' (' + this._o.i18n.today + ')';
+                text += ' (' + this._options.i18n.today + ')';
             }
             if (day.isDisabled) {
-                text = '(' + this._o.i18n.disabled + ') ' + text;
+                text = '(' + this._options.i18n.disabled + ') ' + text;
             }
             return text;
         },
@@ -570,7 +570,7 @@
     renderTitle = function(instance, c, year, month, refYear, randId)
     {
         var i, j, arr,
-            opts = instance._o,
+            opts = instance._options,
             isMinYear = year === opts.minYear,
             isMaxYear = year === opts.maxYear,
             html = '<div class="pika-title" aria-hidden="true">',
@@ -620,7 +620,7 @@
         if (c === 0) {
             html += '<button class="pika-prev' + (prev ? '' : ' is-disabled') + '" ' + (prev ? '' : 'disabled ') + 'type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.previousMonth + '</button>';
         }
-        if (c === (instance._o.numberOfMonths - 1) ) {
+        if (c === (instance._options.numberOfMonths - 1) ) {
             html += '<button class="pika-next' + (next ? '' : ' is-disabled') + '" ' + (next ? '' : 'disabled ') + 'type="button" aria-labelledby="' + randId + '" tabindex="-1">' + opts.i18n.nextMonth + '</button>';
         }
 
@@ -644,7 +644,7 @@
 
         self._onClick = function(e)
         {
-            if (!self._v) {
+            if (!self._visible) {
                 return;
             }
             e = e || window.event;
@@ -658,7 +658,7 @@
             if (!hasClass(target, 'is-disabled')) {
                 if (hasClass(target, 'pika-button') && !hasClass(target, 'is-empty') && !hasClass(target.parentNode, 'is-disabled')) {
                     if (opts.bound) {
-                        this._v && log("Hiding soon because date has been selected and picker is bound.");
+                        this._visible && log("Hiding soon because date has been selected and picker is bound.");
                         self.hideAfter(200);
                     }
                     self.setDate(new Date(target.getAttribute('data-pika-year'), target.getAttribute('data-pika-month'), target.getAttribute('data-pika-day')));
@@ -679,7 +679,7 @@
                     return false;
                 }
             } else {
-                self._c = true;
+                self._clickedPikaSelect = true;
             }
         };
 
@@ -719,8 +719,8 @@
             if (self.isVisible()) {
                 switch(e.keyCode){
                     case 9: /* TAB */
-                        if (self.hasKey && self._o.trigger && self._o.bound) {
-                            self._o.trigger.focus();
+                        if (self.hasKey && self._options.trigger && self._options.bound) {
+                            self._options.trigger.focus();
                             self.hasKey = false;
                         }
                         break;
@@ -728,9 +728,9 @@
                     case 13: /* ENTER */
                         if (self.hasKey && opts.bound) {
                             stopEvent();
-                            if (self._o.trigger) {
-                                self._o.trigger.focus();
-                                try { self._o.trigger.select(); } catch (e) {} // trigger could be a button
+                            if (self._options.trigger) {
+                                self._options.trigger.focus();
+                                try { self._options.trigger.select(); } catch (e) {} // trigger could be a button
                             }
                             self.emitEvent('select', [self.getDate()]);
                             log('Hiding because enter or space pressed');
@@ -807,9 +807,9 @@
         self._onInputFocus = function(event)
         {
             if (self.touched && opts.field && opts.field.nodeName === 'INPUT') {
-                opts.field.blur();
                 self.touched = false;
                 self.focusInside = true;
+                opts.field.blur();
             }
             log("Showing because input was focused", event.target);
             self.show();
@@ -827,20 +827,25 @@
             if (self.hasKey) {
                 return;
             }
-            // IE allows pika div to gain focus; catch blur the input field
-            var pEl = document.activeElement;
-            do {
-                if (hasClass(pEl, 'pika-single') || pEl == self.el) {
-                    return;
+            if (self.focusInside) {
+                return;
+            }
+            requestAnimationFrame(function() {
+                // IE allows pika div to gain focus; catch blur the input field
+                var pEl = document.activeElement;
+                do {
+                    if (hasClass(pEl, 'pika-single') || pEl == self.el) {
+                        return;
+                    }
                 }
-            }
-            while ((pEl = pEl.parentNode));
+                while ((pEl = pEl.parentNode));
 
-            if (!self._c) {
-                this._v && log("Hiding soon because input was blured", event.target, self._b);
-                self.hide(true);
-            }
-            self._c = false;
+                if (!self._clickedPikaSelect) {
+                    self._visible && log("Hiding soon because input was blured", event.target, self._b);
+                    self.hide(true);
+                }
+                self._clickedPikaSelect = false;
+            });
         };
 
         self._onDocumentClick = function(e)
@@ -870,14 +875,14 @@
                 }
             }
             while ((pEl = pEl.parentNode));
-            if (self._v && target !== opts.trigger && pEl !== opts.trigger) {
+            if (self._visible && target !== opts.trigger && pEl !== opts.trigger) {
                 log('Hiding because of document click');
                 self.hide(true);
             }
         };
 
         self.init = function() {
-            this._v = false; // visibility
+            this._visible = false; // visibility
 
             self.el = document.createElement('div');
             self.el.className = 'pika-single' + (opts.isRTL ? ' is-rtl' : '') + (opts.theme ? ' ' + opts.theme : '');
@@ -988,11 +993,11 @@
          */
         config: function(options)
         {
-            if (!this._o) {
-                this._o = extend({}, defaults, true);
+            if (!this._options) {
+                this._options = extend({}, defaults, true);
             }
 
-            var opts = extend(this._o, options, true);
+            var opts = extend(this._options, options, true);
 
             opts.isRTL = !!opts.isRTL;
 
@@ -1061,13 +1066,13 @@
          */
         toString: function()
         {
-            if (!isDate(this._d)) {
+            if (!isDate(this._date)) {
                 return '';
             }
-            if (typeof this._o.formatFn == 'function') {
-                return this._o.formatFn.call(this, this._d);
+            if (typeof this._options.formatFn == 'function') {
+                return this._options.formatFn.call(this, this._date);
             }
-            return this._d.toDateString();
+            return this._date.toDateString();
         },
 
 
@@ -1076,7 +1081,7 @@
          */
         getDate: function()
         {
-            return isDate(this._d) ? new Date(this._d.getTime()) : new Date();
+            return isDate(this._date) ? new Date(this._date.getTime()) : new Date();
         },
 
         /**
@@ -1084,7 +1089,7 @@
          */
         getSelectedDate: function()
         {
-            return isDate(this._d) ? new Date(this._d.getTime()) : null;
+            return isDate(this._date) ? new Date(this._date.getTime()) : null;
         },
 
 
@@ -1103,14 +1108,14 @@
         setDate: function(date, preventOnSelect)
         {
             if (!date) {
-                this._d = null;
+                this._date = null;
 
-                if (this._o.field) {
-                    this._o.field.value = '';
-                    fireEvent(this._o.field, 'change', { firedBy: this });
+                if (this._options.field) {
+                    this._options.field.value = '';
+                    fireEvent(this._options.field, 'change', { firedBy: this });
                 }
 
-                this.emitEvent('change', [this._d]);
+                this.emitEvent('change', [this._date]);
 
                 return this.draw();
             }
@@ -1123,8 +1128,8 @@
 
             setToStartOfDay(date);
 
-            var min = this._o.minDate,
-                max = this._o.maxDate;
+            var min = this._options.minDate,
+                max = this._options.maxDate;
 
             if (isDate(min) && date < min) {
                 date = min;
@@ -1132,33 +1137,33 @@
                 date = max;
             }
 
-            if (areDatesEqual(this._d, date)) {
+            if (areDatesEqual(this._date, date)) {
                 return;
             }
 
-            this._d = new Date(date.getTime());
-            setToStartOfDay(this._d);
-            this.gotoDate(this._d);
+            this._date = new Date(date.getTime());
+            setToStartOfDay(this._date);
+            this.gotoDate(this._date);
 
-            if (this._o.field) {
-                this._o.field.value = this.toString();
-                fireEvent(this._o.field, 'change', { firedBy: this });
+            if (this._options.field) {
+                this._options.field.value = this.toString();
+                fireEvent(this._options.field, 'change', { firedBy: this });
             }
             if (!preventOnSelect) {
                 this.emitEvent('select', [this.getDate()]);
             }
-            this.emitEvent('change', [this._d]);
+            this.emitEvent('change', [this._date]);
         },
 
         selectDate: function(date, preventOnSelect) {
             this.setDate(date, preventOnSelect);
-            if (this._d) {
-                this.speak(this.getDayConfig(this._d).label);
+            if (this._date) {
+                this.speak(this.getDayConfig(this._date).label);
             }
         },
 
         getLabel: function() {
-            var label = '', opts = this._o;
+            var label = '', opts = this._options;
             if (opts.field && opts.field.id) {
                 label = document.querySelector('label[for="' + opts.field.id + '"]');
                 label = label ? label.textContent || label.innerText : '';
@@ -1201,8 +1206,8 @@
                     month: date.getMonth(),
                     year: date.getFullYear()
                 }];
-                if (this._o.mainCalendar === 'right') {
-                    this.calendars[0].month += 1 - this._o.numberOfMonths;
+                if (this._options.mainCalendar === 'right') {
+                    this.calendars[0].month += 1 - this._options.numberOfMonths;
                 }
             }
 
@@ -1219,7 +1224,7 @@
 
         adjustCalendars: function() {
             this.calendars[0] = adjustCalendar(this.calendars[0]);
-            for (var c = 1; c < this._o.numberOfMonths; c++) {
+            for (var c = 1; c < this._options.numberOfMonths; c++) {
                 this.calendars[c] = adjustCalendar({
                     month: this.calendars[0].month + c,
                     year: this.calendars[0].year
@@ -1272,16 +1277,16 @@
          */
         setMinDate: function(value)
         {
-            var d = this._o.parseFn.call(self, value);
+            var d = this._options.parseFn.call(self, value);
             if (isDate(d)) { // d.getTime() === NaN if date is invalid
                 setToStartOfDay(d);
-                this._o.minDate = d;
-                this._o.minYear  = d.getFullYear();
-                this._o.minMonth = d.getMonth();
+                this._options.minDate = d;
+                this._options.minYear  = d.getFullYear();
+                this._options.minMonth = d.getMonth();
             } else {
-                this._o.minDate = defaults.minDate;
-                this._o.minYear  = defaults.minYear;
-                this._o.minMonth = defaults.minMonth;
+                this._options.minDate = defaults.minDate;
+                this._options.minYear  = defaults.minYear;
+                this._options.minMonth = defaults.minMonth;
             }
 
             this.draw();
@@ -1292,16 +1297,16 @@
          */
         setMaxDate: function(value)
         {
-            var d = this._o.parseFn.call(self, value);
+            var d = this._options.parseFn.call(self, value);
             if (isDate(d)) { // d.getTime() === NaN if date is invalid
                 setToStartOfDay(d);
-                this._o.maxDate = d;
-                this._o.maxYear = d.getFullYear();
-                this._o.maxMonth = d.getMonth();
+                this._options.maxDate = d;
+                this._options.maxYear = d.getFullYear();
+                this._options.maxMonth = d.getMonth();
             } else {
-                this._o.maxDate = defaults.maxDate;
-                this._o.maxYear = defaults.maxYear;
-                this._o.maxMonth = defaults.maxMonth;
+                this._options.maxDate = defaults.maxDate;
+                this._options.maxYear = defaults.maxYear;
+                this._options.maxMonth = defaults.maxMonth;
             }
 
             this.draw();
@@ -1309,55 +1314,50 @@
 
         setStartRange: function(value)
         {
-            if (!areDatesEqual(this._o.startRange, value)) {
-                this._o.startRange = value;
+            if (!areDatesEqual(this._options.startRange, value)) {
+                this._options.startRange = value;
                 this.draw();
-                this.emitEvent('startrange', [this._o.startRange]);
+                this.emitEvent('startrange', [this._options.startRange]);
             }
         },
 
         setEndRange: function(value)
         {
-            if (!areDatesEqual(this._o.endRange, value)) {
-                this._o.endRange = value;
+            if (!areDatesEqual(this._options.endRange, value)) {
+                this._options.endRange = value;
                 this.draw();
-                this.emitEvent('endrange', [this._o.endRange]);
+                this.emitEvent('endrange', [this._options.endRange]);
             }
         },
 
         getStartRange: function(value)
         {
-            return this._o.startRange;
+            return this._options.startRange;
         },
 
         getEndRange: function(value)
         {
-            return this._o.endRange;
+            return this._options.endRange;
         },
 
 
         _request: function(action) {
             var self = this;
-            if (window.requestAnimationFrame) {
-                if (!this.requested) {
-                    this.requested = {
-                        request: requestAnimationFrame(function() {
-                            if (self.requested.draw) {
-                                self._draw();
-                            }
-                            if (self.requested.adjustPosition) {
-                                self._adjustPosition();
-                            }
-                            self.focusPicker();
-                            self.requested = null;
-                        })
-                    };
-                }
-                this.requested[action] = true;
-            } else {
-                // execute immediately without animation frame support
-                this['_' + action]();
+            if (!this.requested) {
+                this.requested = {
+                    request: requestAnimationFrame(function() {
+                        if (self.requested.draw) {
+                            self._draw();
+                        }
+                        if (self.requested.adjustPosition) {
+                            self._adjustPosition();
+                        }
+                        self.focusPicker();
+                        self.requested = null;
+                    })
+                };
             }
+            this.requested[action] = true;
         },
 
         /**
@@ -1365,7 +1365,7 @@
          * (uses requestAnimationFrame if available to improve performance)
          */
         draw: function(force) {
-            if (!this._v) {
+            if (!this._visible) {
                 return; // no need to draw when not visible
             }
             if (force) {
@@ -1382,10 +1382,10 @@
          */
         _draw: function(force)
         {
-            if (!this._v && !force) {
+            if (!this._visible && !force) {
                 return;
             }
-            var opts = this._o,
+            var opts = this._options,
                 self = this,
                 minYear = opts.minYear,
                 maxYear = opts.maxYear,
@@ -1411,8 +1411,8 @@
 
             var label = this.getLabel();
 
-            if (this._o.field && this._o.trigger == this._o.field && opts.bound) {
-                this._o.field.setAttribute('aria-label', label);
+            if (this._options.field && this._options.trigger == this._options.field && opts.bound) {
+                this._options.field.setAttribute('aria-label', label);
             }
 
             for (var c = 0; c < opts.numberOfMonths; c++) {
@@ -1441,7 +1441,7 @@
 
         focusPicker: function(forceFocus) {
             var self = this;
-            var opts = this._o;
+            var opts = this._options;
 
             if (!this.focusInside && !forceFocus) {
                 return;
@@ -1473,11 +1473,11 @@
         {
             var field, pEl, width, height, viewportWidth, viewportHeight, scrollTop, left, top, clientRect;
 
-            if (this._o.container) return;
+            if (this._options.container) return;
 
             this.el.style.position = 'absolute';
 
-            field = this._o.positionTarget || this._o.trigger;
+            field = this._options.positionTarget || this._options.trigger;
             pEl = field;
             width = this.el.offsetWidth;
             height = this.el.offsetHeight;
@@ -1499,17 +1499,17 @@
             }
 
             var halign = 0;
-            if (this._o.position.indexOf('right') > -1) {
+            if (this._options.position.indexOf('right') > -1) {
                 halign = 1;
             } else
-            if (this._o.position.indexOf('center') > -1) {
+            if (this._options.position.indexOf('center') > -1) {
                 halign = 0.5;
             }
 
             left -= (width - field.offsetWidth) * halign;
 
             // default position is bottom & left
-            if (this._o.reposition) {
+            if (this._options.reposition) {
                 var overflow = {
                     right: Math.max(0, (left + width) - (viewportWidth - 20)),
                     left: Math.max(0, 20 - left),
@@ -1524,8 +1524,8 @@
         },
 
         getDayConfig: function(day) {
-            var opts   = this._o,
-                isSelected = isDate(this._d) ? areDatesEqual(day, this._d) : false,
+            var opts   = this._options,
+                isSelected = isDate(this._date) ? areDatesEqual(day, this._date) : false,
                 isToday = areDatesEqual(day, now),
                 dayNumber = day.getDate(),
                 monthNumber = day.getMonth(),
@@ -1570,7 +1570,7 @@
          */
         render: function(year, month, randId)
         {
-            var opts   = this._o,
+            var opts   = this._options,
                 days   = getDaysInMonth(year, month),
                 before = new Date(year, month, 1).getDay(),
                 data   = [],
@@ -1598,8 +1598,8 @@
                 after -= 7;
             }
             cells += 7 - after;
-            if (this._d && new Date(year, month, 1) <= this._d && new Date(year, month+1, 1) > this._d) {
-                selectedInMonth = this._d;
+            if (this._date && new Date(year, month, 1) <= this._date && new Date(year, month+1, 1) > this._date) {
+                selectedInMonth = this._date;
             } else
             if (new Date(year, month, 1) <= now && new Date(year, month+1, 1) > now) {
                 selectedInMonth = now;
@@ -1630,13 +1630,13 @@
         },
 
         isValid: function() {
-            if (!isDate(this._d)) {
+            if (!isDate(this._date)) {
                 return 0;
             }
-            if (isDate(this._o.minDate) && (this._d < this._o.minDate)) {
+            if (isDate(this._options.minDate) && (this._date < this._options.minDate)) {
                 return false;
             }
-            if (isDate(this._o.maxDate) && (this._d > this._o.maxDate)) {
+            if (isDate(this._options.maxDate) && (this._date > this._options.maxDate)) {
                 return false;
             }
             return true;
@@ -1644,16 +1644,16 @@
 
         isVisible: function()
         {
-            return this._v;
+            return this._visible;
         },
 
         show: function()
         {
-            var opts = this._o;
+            var opts = this._options;
             clearTimeout(this.hideTimeout);
 
-            if (this._d) {
-                this.gotoDate(this._d);
+            if (this._date) {
+                this.gotoDate(this._date);
             }
 
             document.body.appendChild(this.speakEl);
@@ -1667,26 +1667,26 @@
 
             if (!this.isVisible()) {
                 removeClass(this.el, 'is-hidden');
-                this._v = true;
+                this._visible = true;
                 this.draw();
-                if (this._o.bound) {
+                if (this._options.bound) {
                     this.timeShowed = new Date();
                     addEvent(document, 'click', this._onDocumentClick);
                     this.adjustPosition();
                 }
-                if (this._o.field) {
-                    addClass(this._o.field, 'is-visible-pikaday');
-                    this.recentValue = this._o.field.value;
+                if (this._options.field) {
+                    addClass(this._options.field, 'is-visible-pikaday');
+                    this.recentValue = this._options.field.value;
                 }
                 this.emitEvent('open');
-                if (this._o.field && this._o.field != this._o.trigger) {
+                if (this._options.field && this._options.field != this._options.trigger) {
                     this.speak(this.getLabel());
                 }
             }
         },
 
         cancel: function() {
-            var field = this._o.field;
+            var field = this._options.field;
             if (field) {
                 field.value = this.recentValue;
             }
@@ -1700,7 +1700,7 @@
         hideAfter: function(delay, cancelled) {
             var self = this;
             clearTimeout(this.hideTimeout);
-            if (this._v !== false) {
+            if (this._visible !== false) {
                 log("Will hide after " + delay + "ms.");
                 this.hideTimeout = sto(function() {
                     self.hide(cancelled);
@@ -1710,25 +1710,25 @@
 
         hide: function(cancelled)
         {
-            var v = this._v;
+            var v = this._visible;
             if (v !== false) {
                 clearTimeout(this.hideTimeout);
                 if (this.requested) {
                     cancelAnimationFrame(this.requested.request);
                 }
                 this.hasKey = false;
-                if (this._o.bound) {
+                if (this._options.bound) {
                     removeEvent(document, 'click', this._onDocumentClick);
                 }
-                if (this._o.field) {
-                    removeClass(this._o.field, 'is-visible-pikaday');
+                if (this._options.field) {
+                    removeClass(this._options.field, 'is-visible-pikaday');
                 }
-                if (this._o.bound) {
+                if (this._options.bound) {
                     if (this.el.parentNode) {
                         this.el.parentNode.removeChild(this.el);
                     }
                 }
-                this._v = false;
+                this._visible = false;
                 this.emitEvent('close');
                 if (this.speakEl.parentNode) {
                     document.body.removeChild(this.speakEl);
@@ -1747,14 +1747,14 @@
             removeEvent(this.el, 'touchend', this._onClick, true);
             removeEvent(this.el, 'change', this._onChange);
             removeEvent(this.el, 'keydown', this._onKeyChange);
-            if (this._o.field) {
-                removeEvent(this._o.field, 'change', this._onInputChange);
-                if (this._o.bound) {
-                    removeEvent(this._o.trigger, 'click', this._onInputClick);
+            if (this._options.field) {
+                removeEvent(this._options.field, 'change', this._onInputChange);
+                if (this._options.bound) {
+                    removeEvent(this._options.trigger, 'click', this._onInputClick);
                     removeEvent(document, 'touchstart', this._onTouch);
-                    removeEvent(this._o.trigger, 'focus', this._onInputFocus);
-                    removeEvent(this._o.trigger, 'blur', this._onInputBlur);
-                    removeEvent(this._o.trigger, 'keydown', this._onKeyChange);
+                    removeEvent(this._options.trigger, 'focus', this._onInputFocus);
+                    removeEvent(this._options.trigger, 'blur', this._onInputBlur);
+                    removeEvent(this._options.trigger, 'keydown', this._onKeyChange);
                 }
             }
 

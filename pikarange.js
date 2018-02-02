@@ -1,7 +1,7 @@
 /*!
- * Pikarange 1.0.8
+ * Pikarange 1.0.11
  *
- * Copyright © 2017 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
+ * Copyright © 2018 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
 /* eslint-disable */
 
@@ -122,26 +122,26 @@
             }
             var minEndDate = options.minDate;
             var time;
-            if (typeof endPicker._o.minRange !== 'undefined') {
-                time = d.getTime() + daysToTime(endPicker._o.minRange);
+            if (typeof endPicker._options.minRange !== 'undefined') {
+                time = d.getTime() + daysToTime(endPicker._options.minRange);
                 if (!isDate(minEndDate) || minEndDate < time) {
                     minEndDate = new Date(time);
                 }
             }
             var maxEndDate = options.maxDate;
-            if (typeof endPicker._o.maxRange !== 'undefined') {
-                time = d.getTime() + daysToTime(endPicker._o.maxRange);
+            if (typeof endPicker._options.maxRange !== 'undefined') {
+                time = d.getTime() + daysToTime(endPicker._options.maxRange);
                 if (!isDate(maxEndDate) || maxEndDate > time) {
                     maxEndDate = new Date(time);
                 }
             }
             endPicker.setMinDate(minEndDate);
             endPicker.setMaxDate(maxEndDate);
-            if (endPicker._d && (endPicker._d < minEndDate || endPicker._d > maxEndDate)) {
+            if (endPicker._date && (endPicker._date < minEndDate || endPicker._date > maxEndDate)) {
                 endPicker.setDate(null);
                 endPicker.gotoDate(d);
             }
-            syncCalendar(startPicker, endPicker, endPicker._d || startPicker._d);
+            syncCalendar(startPicker, endPicker, endPicker._date || startPicker._date);
         }
 
         function setEndRange(d) {
@@ -153,25 +153,25 @@
 
         startPicker.on('change', function() {
             delete this.originalRange;
-            setStartRange(this._d);
+            setStartRange(this._date);
             if (!options.preventSync || !endPicker.isValid()) {
                 endPicker.setDate(null);
-                syncCalendar(startPicker, endPicker, startPicker._d);
+                syncCalendar(startPicker, endPicker, startPicker._date);
             }
         });
         startPicker.on('select', function() {
-            if (endPicker._o.bound) {
-                (endPicker._o.trigger || endPicker._o.field).focus();
+            if (endPicker._options.bound) {
+                (endPicker._options.trigger || endPicker._options.field).focus();
             } else {
                 endPicker.focusPicker(true);
             }
         });
         endPicker.on('change', function() {
             delete this.originalRange;
-            setEndRange(this._d);
+            setEndRange(this._date);
         });
         endPicker.on('select', function() {
-            if (!startPicker._o.bound) {
+            if (!startPicker._options.bound) {
                 startPicker.focusPicker(true);
             }
         });
@@ -199,7 +199,7 @@
             }
             if (a && a !== activePicker) {
                 activePicker = a;
-                syncCalendar(b, a, a._d);
+                syncCalendar(b, a, a._date);
                 addClass(a.el, 'is-focused');
                 removeClass(b.el, 'is-focused');
             }
@@ -221,13 +221,13 @@
         });
         startPicker.on('init', function() {
             // both have initialised
-            setStartRange(startPicker._d);
-            setEndRange(endPicker._d);
+            setStartRange(startPicker._date);
+            setEndRange(endPicker._date);
             addEvent(startPicker.el, 'mouseover', handleStartOver);
             addEvent(endPicker.el, 'mouseover', handleEndOver);
             addClass(startPicker.el, 'is-focused');
-            addClass(startPicker.el, 'is-start');
-            addClass(endPicker.el, 'is-end');
+            addClass(startPicker.el, 'is-start pika-range');
+            addClass(endPicker.el, 'is-end pika-range');
         });
 
         var handleStartOver = getPickerOver(startPicker);
@@ -235,7 +235,7 @@
 
         function getPickerOver(picker) {
             return function handlePickerOver(event) {
-                if (startPicker._d && endPicker._d && picker === startPicker) {
+                if (options.hideRangeWhenSelected && startPicker._date && endPicker._date) {
                     return; // only show "live range" when no range is set
                 }
                 if (!hasClass(event.target, 'pika-button')) {
@@ -253,7 +253,7 @@
                 delete picker.outDelay;
 
                 if (typeof picker.originalRange === 'undefined') {
-                    picker.originalRange = [picker._o.startRange, picker._o.endRange];
+                    picker.originalRange = [picker._options.startRange, picker._options.endRange];
                 }
                 var targetEl = event.target;
                 console.log(targetEl.getAttribute('data-pika-day'));
