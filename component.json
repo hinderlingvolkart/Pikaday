@@ -1,17 +1,17 @@
 {
   "name": "pikaday",
-  "repo": "hinderlingvolkart/PikadayPlus",
-  "description": "A refreshing JavaScript Datepicker — lightweight, no dependencies, accessible",
+  "repo": "https://github.com/hinderlingvolkart/PikadayPlus.git",
+  "description": "JavaScript Datepicker based on Pikaday — focused on accessibility",
   "version": "1.4.0",
   "keywords": [
     "datepicker",
     "calendar",
     "date"
   ],
-  "main": "pikaday.js",
-  "scripts": ["pikaday.js"],
-  "styles":  ["css/pikaday.css"],
+  "main": "dist/pikaday.js",
+  "scripts": ["dist/pikaday.js", "dist/pikarange.js"],
+  "styles":  ["dist/css/pikaday.css"],
   "dependencies": {},
-  "demo": "http://dbushell.github.io/Pikaday/",
+  "demo": "https://github.com/hinderlingvolkart/PikadayPlus",
   "license": "MIT"
 }

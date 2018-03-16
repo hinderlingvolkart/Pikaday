@@ -1,11 +1,11 @@
 Pikaday
 ========
 
-### A refreshing JavaScript Datepicker
+### An accessible JavaScript Datepicker
 
-* Lightweight (less than 5kb minified and gzipped)
-* No dependencies (but plays well with [Moment.js][moment])
-* Modular CSS classes for easy styling
+* Fast
+* Accessible
+* Versatile
 
 Pikaday Plus is based on [Pikaday][Pikaday]
 

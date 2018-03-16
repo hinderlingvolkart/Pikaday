@@ -30,6 +30,9 @@ $pd-week-color: #999 !default;
 // Font
 $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
 
+.pikaday {
+
+}
 
 .pika-single {
     z-index: 9999;
@@ -194,14 +197,14 @@ $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
     text-align: right;
     background: $pd-day-bg;
 
-    .is-today & {
+    &.is-today {
         color: $pd-day-today-color;
         font-weight: bold;
     }
 
 
 
-    .is-selected & {
+    &.is-selected {
         color: $pd-day-selected-color;
         font-weight: bold;
         background: $pd-day-selected-bg;
@@ -209,29 +212,29 @@ $pd-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !default;
         border-radius: 3px;
     }
 
-    .is-disabled &,
-    .is-outside-current-month & {
+    &.is-disabled,
+    &.is-outside-current-month {
         pointer-events: none;
         cursor: default;
         color: $pd-day-disabled-color;
         opacity: .3;
     }
 
-    .is-inrange & {
+    &.is-inrange {
         background: #D5E9F7;
         box-shadow: none;
         color: inherit;
         border-radius: 0;
     }
 
-    .is-startrange & {
+    &.is-startrange {
         color: #fff;
         background: #6CB31D;
         box-shadow: none;
         border-radius: 3px;
     }
 
-    .is-endrange & {
+    &.is-endrange {
         color: #fff;
         background: #33aaff;
         box-shadow: none;

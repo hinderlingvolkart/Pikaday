@@ -136,32 +136,31 @@
   line-height: 15px;
   text-align: right;
   background: #f5f5f5; }
-  .is-today .pika-button {
+  .pika-button.is-today {
     color: #33aaff;
     font-weight: bold; }
-  .is-selected .pika-button {
+  .pika-button.is-selected {
     color: #fff;
     font-weight: bold;
     background: #33aaff;
     box-shadow: inset 0 1px 3px #178fe5;
     border-radius: 3px; }
-  .is-disabled .pika-button,
-  .is-outside-current-month .pika-button {
+  .pika-button.is-disabled, .pika-button.is-outside-current-month {
     pointer-events: none;
     cursor: default;
     color: #999;
     opacity: .3; }
-  .is-inrange .pika-button {
+  .pika-button.is-inrange {
     background: #D5E9F7;
     box-shadow: none;
     color: inherit;
     border-radius: 0; }
-  .is-startrange .pika-button {
+  .pika-button.is-startrange {
     color: #fff;
     background: #6CB31D;
     box-shadow: none;
     border-radius: 3px; }
-  .is-endrange .pika-button {
+  .pika-button.is-endrange {
     color: #fff;
     background: #33aaff;
     box-shadow: none;

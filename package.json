@@ -30,7 +30,9 @@
   "devDependencies": {
     "expect.js": "^0.3.1",
     "mocha": "~1.18.2",
-    "node-sass": "^3.8.0"
+    "node-sass": "^3.8.0",
+    "rollup": "^0.57.0",
+    "rollup-plugin-buble": "^0.19.2"
   },
   "testling": {
     "harness": "mocha",
@@ -45,7 +47,12 @@
     ]
   },
   "scripts": {
-    "sass": "node-sass scss --output css",
-    "watch": "node-sass --watch scss --output css"
+    "build": "rollup --config rollup.config.js --input src/Pikaday.js --output.file dist/Pikaday.js --output.name Pikaday -f umd",
+    "watch": "rollup --config rollup.config.js --input src/Pikaday.js --output.file dist/Pikaday.js --output.name Pikaday -f umd --watch; node-sass --watch scss --output css",
+    "sass": "node-sass src/scss --output dist/css"
+  },
+  "dependencies": {
+    "preact": "^8.2.7",
+    "rollup-plugin-jsx": "^1.0.3"
   }
 }
