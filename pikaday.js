@@ -641,6 +641,19 @@
         var self = this,
             opts = self.config(options);
 
+        self.defaults = defaults;
+
+        // backwards compatibility
+
+        Object.defineProperty(this, "_d", {
+          get: function() { return self._date; },
+          set: function(value) { self._date = value; }
+        });
+        Object.defineProperty(this, "_o", {
+          get: function() { return self._options; },
+          set: function(value) { self._options = value; }
+        });
+
 
         self._onClick = function(e)
         {
@@ -817,6 +830,9 @@
 
         self._onInputClick = function(event)
         {
+            if (self.touched) {
+                self._options.trigger.focus(); // because iOS wouldn't do
+            }
             self.touched = false;
             log("Showing because input was clicked", event.target);
             self.show();
