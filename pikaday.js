@@ -1,5 +1,5 @@
 /*!
- * PikadayPlus 1.0.11
+ * PikadayPlus 1.0.12
  *
  * Copyright © 2014 David Bushell | BSD & MIT license | https://github.com/dbushell/Pikaday
  * Copyright © 2018 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
@@ -804,9 +804,9 @@
             }
             date = opts.parseFn.call(self, opts.field.value);
             if (isDate(date)) {
-              self.setDate(date);
+              self.setDate(date, true);
             } else {
-              self.setDate(null);
+              self.setDate(null, true);
             }
         };
 
@@ -1731,6 +1731,7 @@
                 clearTimeout(this.hideTimeout);
                 if (this.requested) {
                     cancelAnimationFrame(this.requested.request);
+                    this.requested = null;
                 }
                 this.hasKey = false;
                 if (this._options.bound) {
