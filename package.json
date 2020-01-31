@@ -44,6 +44,11 @@
       "opera/latest"
     ]
   },
+  "prettier": {
+    "printWidth": 100,
+    "tabs": true,
+    "singleQuote": true
+  },
   "scripts": {
     "sass": "node-sass scss --output css",
     "watch": "node-sass --watch scss --output css"
