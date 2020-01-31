@@ -1198,7 +1198,7 @@
 			this.emitEvent('change', [this._date]);
 		},
 
-		setField(value) {
+		setField: function(value) {
 			var field = this._options.field;
 			if (field && value !== field.value) {
 				field.value = value;
@@ -1207,7 +1207,7 @@
 			} else {
 				return false;
 			}
-		}
+		},
 
 		selectDate: function(date, preventOnSelect) {
 			this.setDate(date, preventOnSelect);
