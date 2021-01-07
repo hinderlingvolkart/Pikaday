@@ -1,11 +1,11 @@
 /*!
- * Pikarange 1.0.13
+ * Pikarange 1.0.14
  *
  * Copyright © 2018 Hinderling Volkart | BSD & MIT license | https://github.com/hinderlingvolkart/PikadayPlus
  */
 /* eslint-disable */
 
-(function(root, factory) {
+(function (root, factory) {
 	'use strict';
 
 	var Pikaday;
@@ -15,14 +15,14 @@
 		module.exports = factory(Pikaday);
 	} else if (typeof define === 'function' && define.amd) {
 		// AMD. Register as an anonymous module.
-		define(function(req) {
+		define(function (req) {
 			Pikaday = require('pikaday');
 			return factory(Pikaday);
 		});
 	} else {
 		root.Pikarange = factory(root.Pikaday);
 	}
-})(this, function(Pikaday) {
+})(this, function (Pikaday) {
 	'use strict';
 
 	/**
@@ -40,10 +40,10 @@
 		addToDate = util.addToDate,
 		isDate = util.isDate,
 		containsElement = util.containsElement,
-		extendCallback = function(src, dst, name) {
+		extendCallback = function (src, dst, name) {
 			var origMethod = src[name];
 			if (origMethod) {
-				src[name] = function() {
+				src[name] = function () {
 					origMethod.apply(this, arguments);
 					dst[name].apply(this, arguments);
 				};
@@ -51,16 +51,16 @@
 				src[name] = dst[name];
 			}
 		},
-		extendCallbacks = function(orig, overwrite) {
+		extendCallbacks = function (orig, overwrite) {
 			for (var method in overwrite) {
 				extendCallback(orig, overwrite, method);
 			}
 			return orig;
 		},
-		daysToTime = function(days) {
+		daysToTime = function (days) {
 			return days * 24 * 3600000;
 		},
-		extend = function(out) {
+		extend = function (out) {
 			out = out || {};
 			for (var o, i = 1; i < arguments.length; i++) {
 				o = arguments[i];
@@ -76,7 +76,7 @@
 		/**
 		 * Pikarange constructor
 		 */
-		Pikarange = function(options) {
+		Pikarange = function (options) {
 			var self = this;
 			var startOptions = options.start.nodeName ? { field: options.start } : options.start;
 			var endOptions = options.end.nodeName ? { field: options.end } : options.end;
@@ -86,15 +86,11 @@
 			delete options.start;
 			delete options.end;
 
-			pickerOptions = extend({}, options, startOptions, {
-				autoInit: false
-			});
+			pickerOptions = extend({}, options, startOptions, { autoInit: false });
 			var startPicker = new Pikaday(pickerOptions);
 			var activePicker = startPicker;
 
-			pickerOptions = extend({}, options, endOptions, {
-				autoInit: false
-			});
+			pickerOptions = extend({}, options, endOptions, { autoInit: false });
 			var endPicker = new Pikaday(pickerOptions);
 
 			startPicker.isStart = true;
@@ -136,6 +132,7 @@
 					endPicker.setDate(null);
 					endPicker.gotoDate(d);
 				}
+
 				syncCalendar(startPicker, endPicker, endPicker._date || startPicker._date);
 			}
 
@@ -144,26 +141,24 @@
 				endPicker.setEndRange(d);
 			}
 
-			startPicker.on('change', function() {
+			startPicker.on('change', function () {
 				delete this.originalRange;
 				setStartRange(this._date);
-				if (!options.preventSync || !endPicker.isValid()) {
-					endPicker.setDate(null);
-					syncCalendar(startPicker, endPicker, startPicker._date);
-				}
 			});
-			startPicker.on('select', function() {
+			startPicker.on('select', function () {
 				if (endPicker._options.bound) {
 					(endPicker._options.trigger || endPicker._options.field).focus();
 				} else {
 					endPicker.focusPicker(true);
 				}
+				endPicker.setDate(null);
+				syncCalendar(startPicker, endPicker, startPicker._date);
 			});
-			endPicker.on('change', function() {
+			endPicker.on('change', function () {
 				delete this.originalRange;
 				setEndRange(this._date);
 			});
-			endPicker.on('select', function() {
+			endPicker.on('select', function () {
 				if (!startPicker._options.bound) {
 					startPicker.focusPicker(true);
 				}
@@ -173,8 +168,8 @@
 				target.calendars = [
 					{
 						month: source.calendars[0].month,
-						year: source.calendars[0].year
-					}
+						year: source.calendars[0].year,
+					},
 				];
 				target.adjustCalendars();
 				if (targetDate) {
@@ -206,24 +201,24 @@
 			}
 			addEvent(document, 'focusin', handleFocus);
 
-			startPicker.on('close', function() {
+			startPicker.on('close', function () {
 				delete this.originalRange;
 			});
-			endPicker.on('close', function() {
+			endPicker.on('close', function () {
 				delete this.originalRange;
 			});
 
-			startPicker.on('destroy', function() {
+			startPicker.on('destroy', function () {
 				removeEvent(startPicker.el, 'mouseover', handleStartOver);
 				removeEvent(endPicker.el, 'mouseover', handleEndOver);
 				endPicker.destroy();
 				removeEvent(document, 'focusin', handleFocus);
 			});
 
-			endPicker.on('init', function() {
+			endPicker.on('init', function () {
 				startPicker.init();
 			});
-			startPicker.on('init', function() {
+			startPicker.on('init', function () {
 				// both have initialised
 				setStartRange(startPicker._date);
 				setEndRange(endPicker._date);
@@ -244,7 +239,7 @@
 					}
 					if (!hasClass(event.target, 'pika-button')) {
 						if (!picker.outDelay && picker.originalRange) {
-							picker.outDelay = setTimeout(function() {
+							picker.outDelay = setTimeout(function () {
 								setStartRange(picker.originalRange[0], true);
 								setEndRange(picker.originalRange[1], true);
 								delete picker.originalRange;
@@ -259,7 +254,7 @@
 					if (typeof picker.originalRange === 'undefined') {
 						picker.originalRange = [
 							picker._options.startRange,
-							picker._options.endRange
+							picker._options.endRange,
 						];
 					}
 					var targetEl = event.target;
